@@ -62,6 +62,18 @@ export interface CreatedOrder {
   items: CreatedOrderItem[]
 }
 
+import type { OrderStatus } from './orders'
+
+/** Um pedido antigo, devolvido por get_orders_by_phone (consulta sem login) */
+export interface CustomerOrder {
+  order_number: string
+  created_at: string
+  status: OrderStatus
+  total_cents: number
+  item_count: number
+  items: CreatedOrderItem[]
+}
+
 export type EventType =
   | 'product_view'
   | 'add_to_cart'

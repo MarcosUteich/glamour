@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { minOrderProgress, orderErrorMessage } from './orders'
+import { minOrderProgress, orderErrorMessage, orderLookupErrorMessage } from './orders'
 
 describe('minOrderProgress', () => {
   it('mostra quanto falta enquanto está abaixo do mínimo', () => {
@@ -32,5 +32,16 @@ describe('orderErrorMessage', () => {
 
   it('tem mensagem genérica para erros desconhecidos', () => {
     expect(orderErrorMessage('boom')).toMatch(/Tente de novo/)
+  })
+})
+
+describe('orderLookupErrorMessage', () => {
+  it('traduz telefone inválido e limite de consultas', () => {
+    expect(orderLookupErrorMessage('invalid_phone')).toMatch(/DDD/)
+    expect(orderLookupErrorMessage('rate_limited')).toMatch(/minutos/)
+  })
+
+  it('tem mensagem genérica para erros desconhecidos', () => {
+    expect(orderLookupErrorMessage('boom')).toMatch(/Tente de novo/)
   })
 })

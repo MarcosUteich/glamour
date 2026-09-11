@@ -2,7 +2,7 @@ import { DEFAULT_SETTINGS } from '@/config'
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/demo/catalog'
 import { isValidBRPhone, normalizeBRPhone } from '@/lib/phone'
 import { photoUrl, supabase } from '@/lib/supabase'
-import type { Category, CreatedOrder, Product, Settings } from '@/lib/types'
+import type { Category, CreatedOrder, CustomerOrder, Product, Settings } from '@/lib/types'
 
 export interface Catalog {
   categories: Category[]
@@ -110,7 +110,7 @@ function createDemoOrder(input: NewOrder): CreatedOrder {
   if (total < DEFAULT_SETTINGS.min_order_cents) throw new OrderError('below_minimum')
 
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()).replaceAll('-', '')
-  return {
+  const order: CreatedOrder = {
     order_number: `GLM-${day}-${String(nextDemoSequence(day)).padStart(3, '0')}`,
     customer_name: name,
     customer_phone: normalizeBRPhone(input.phone),
@@ -119,6 +119,8 @@ function createDemoOrder(input: NewOrder): CreatedOrder {
     min_order_cents: DEFAULT_SETTINGS.min_order_cents,
     items,
   }
+  saveDemoOrder(order)
+  return order
 }
 
 function nextDemoSequence(day: string): number {
@@ -131,4 +133,46 @@ function nextDemoSequence(day: string): number {
   } catch {
     return 1
   }
+}
+
+// Histórico de pedidos do modo demonstração, para testar "meus pedidos" sem Supabase
+const DEMO_ORDERS_KEY = 'glamour:demo-pedidos'
+
+function saveDemoOrder(order: CreatedOrder) {
+  try {
+    const all = JSON.parse(localStorage.getItem(DEMO_ORDERS_KEY) ?? '[]') as CreatedOrder[]
+    all.unshift(order)
+    localStorage.setItem(DEMO_ORDERS_KEY, JSON.stringify(all.slice(0, 50)))
+  } catch {
+    // sem armazenamento disponível: a consulta por telefone só não encontra nada
+  }
+}
+
+/** Consulta pedidos pelo WhatsApp (sem login). Erros chegam como OrderError; ver lib/orders.ts. */
+export async function fetchOrdersByPhone(phone: string): Promise<CustomerOrder[]> {
+  if (!supabase) return fetchDemoOrdersByPhone(phone)
+  const { data, error } = await supabase.rpc('get_orders_by_phone', { p_phone: phone })
+  if (error) throw new OrderError(error.message, error.details)
+  return (data ?? []) as CustomerOrder[]
+}
+
+function fetchDemoOrdersByPhone(phone: string): CustomerOrder[] {
+  if (!isValidBRPhone(phone)) throw new OrderError('invalid_phone')
+  const normalized = normalizeBRPhone(phone)
+  let all: CreatedOrder[]
+  try {
+    all = JSON.parse(localStorage.getItem(DEMO_ORDERS_KEY) ?? '[]') as CreatedOrder[]
+  } catch {
+    all = []
+  }
+  return all
+    .filter((o) => o.customer_phone === normalized)
+    .map((o) => ({
+      order_number: o.order_number,
+      created_at: new Date().toISOString(),
+      status: 'novo',
+      total_cents: o.total_cents,
+      item_count: o.item_count,
+      items: o.items,
+    }))
 }

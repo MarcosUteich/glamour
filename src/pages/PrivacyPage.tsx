@@ -37,6 +37,14 @@ export function PrivacyPage() {
           </p>
         </div>
         <div>
+          <h2 className="font-semibold text-malva-800">Consultar pedidos antigos</h2>
+          <p className="mt-1">
+            Em <Link to="/meus-pedidos" className="underline underline-offset-2">Meus pedidos</Link>, digitar o WhatsApp
+            mostra o histórico feito com esse número — sem senha nem cadastro. Por isso, quem souber o seu WhatsApp
+            consegue ver esses pedidos; não compartilhe seu número com quem não deva ver essa informação.
+          </p>
+        </div>
+        <div>
           <h2 className="font-semibold text-malva-800">Seus direitos</h2>
           <p className="mt-1">
             É só falar com a gente pelo WhatsApp <strong>{formatBRPhone(settings.whatsapp_number)}</strong> para consultar,

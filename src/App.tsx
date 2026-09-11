@@ -11,6 +11,7 @@ const OrderConfirmedPage = lazy(() =>
   import('@/pages/OrderConfirmedPage').then((m) => ({ default: m.OrderConfirmedPage })),
 )
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage').then((m) => ({ default: m.PrivacyPage })))
+const MyOrdersPage = lazy(() => import('@/pages/MyOrdersPage').then((m) => ({ default: m.MyOrdersPage })))
 const AdminApp = lazy(() => import('@/admin/AdminApp').then((m) => ({ default: m.AdminApp })))
 
 const Loading = () => (
@@ -31,6 +32,7 @@ export default function App() {
               <Route path="produto/:slug" element={<ProductPage />} />
               <Route path="pedido" element={<OrderPage />} />
               <Route path="pedido/confirmado/:orderNumber" element={<OrderConfirmedPage />} />
+              <Route path="meus-pedidos" element={<MyOrdersPage />} />
               <Route path="privacidade" element={<PrivacyPage />} />
             </Route>
             <Route path="admin/*" element={<AdminApp />} />

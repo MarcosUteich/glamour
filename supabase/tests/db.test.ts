@@ -61,7 +61,7 @@ async function stockOf(id: string) {
 beforeAll(async () => {
   db = new PGlite()
   await db.exec(SUPABASE_STUB)
-  for (const file of ['0001_schema.sql', '0002_rls.sql', '0003_functions.sql']) {
+  for (const file of ['0001_schema.sql', '0002_rls.sql', '0003_functions.sql', '0005_order_lookup.sql']) {
     await db.exec(sql(`migrations/${file}`))
   }
   await db.exec(sql('seed.sql'))
@@ -257,6 +257,53 @@ describe('painel', () => {
       ),
     )
     expect(rows[0].code).toBe('BR-102')
+  })
+})
+
+describe('get_orders_by_phone (consulta sem login)', () => {
+  const PHONE_A = '51988880001'
+  const PHONE_B = '51988880002'
+
+  async function ordersByPhone(phone: string) {
+    const { rows } = await as('anon', null, () =>
+      db.query<{ r: unknown }>('select public.get_orders_by_phone($1) as r', [phone]),
+    )
+    return rows[0].r as Array<Record<string, unknown>>
+  }
+
+  it('devolve só os pedidos daquele telefone, com os itens', async () => {
+    const a1 = await as('anon', null, () => createOrder(PHONE_A, [{ product_id: P_BRINCO, quantity: 20 }]))
+    const a2 = await as('anon', null, () => createOrder(PHONE_A, [{ product_id: P_COLAR, quantity: 7 }]))
+    await as('anon', null, () => createOrder(PHONE_B, [{ product_id: P_BRINCO, quantity: 20 }]))
+
+    const list = await ordersByPhone(PHONE_A)
+    expect(list.map((o) => o.order_number).sort()).toEqual([a1.order_number, a2.order_number].sort())
+    const withItems = list.find((o) => o.order_number === a2.order_number) as { items: Array<{ code: string }> }
+    expect(withItems.items).toEqual([expect.objectContaining({ code: 'CL-101', quantity: 7 })])
+  })
+
+  it('telefone sem pedidos devolve lista vazia, não erro', async () => {
+    expect(await ordersByPhone('51988889999')).toEqual([])
+  })
+
+  it('recusa telefone inválido', async () => {
+    await expect(ordersByPhone('123')).rejects.toThrow(/invalid_phone/)
+  })
+
+  it('aceita o telefone com ou sem +55/máscara', async () => {
+    const withPlus55 = await ordersByPhone(`+55 (${PHONE_A.slice(0, 2)}) ${PHONE_A.slice(2, 7)}-${PHONE_A.slice(7)}`)
+    expect(withPlus55.length).toBeGreaterThan(0)
+  })
+
+  it('limita a 20 consultas por telefone em 10 minutos', async () => {
+    const phone = '51988880099'
+    for (let i = 0; i < 20; i++) await ordersByPhone(phone)
+    await expect(ordersByPhone(phone)).rejects.toThrow(/rate_limited/)
+  })
+
+  it('não fica registrado em lugar acessível ao anônimo', async () => {
+    const rows = await as('anon', null, async () => (await db.query('select * from public.phone_lookups')).rows)
+    expect(rows).toHaveLength(0)
   })
 })
 

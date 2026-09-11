@@ -60,3 +60,15 @@ export function orderErrorMessage(code: string, detail?: string | null): string 
       return 'Não conseguimos registrar o pedido agora. Tente de novo em instantes.'
   }
 }
+
+/** Traduz os códigos de erro de get_orders_by_phone (supabase/migrations/0005_order_lookup.sql). */
+export function orderLookupErrorMessage(code: string): string {
+  switch (code) {
+    case 'invalid_phone':
+      return 'Confira o WhatsApp: use DDD + número, como (51) 99999-9999.'
+    case 'rate_limited':
+      return 'Muitas consultas com este WhatsApp em pouco tempo. Tente de novo em alguns minutos.'
+    default:
+      return 'Não conseguimos consultar os pedidos agora. Tente de novo em instantes.'
+  }
+}

@@ -39,6 +39,9 @@ export function StoreFooter() {
               Instagram
             </a>
           )}
+          <Link to="/meus-pedidos" className="block hover:underline">
+            Meus pedidos
+          </Link>
           <Link to="/privacidade" className="block hover:underline">
             Privacidade
           </Link>
