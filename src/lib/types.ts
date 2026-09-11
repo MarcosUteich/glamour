@@ -2,6 +2,8 @@ export interface Category {
   id: string
   name: string
   slug: string
+  /** Texto da página da categoria e da busca do Google (migration 0006) */
+  description?: string | null
   code_prefix: string | null
   image_url: string | null
   sort_order: number

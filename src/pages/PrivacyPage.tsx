@@ -45,6 +45,36 @@ export function PrivacyPage() {
           </p>
         </div>
         <div>
+          <h2 className="font-semibold text-malva-800">Cookies e estatísticas</h2>
+          <p className="mt-1">
+            Usamos o <strong>Google Analytics</strong> e o <strong>Pixel da Meta</strong> (Facebook e Instagram) para saber
+            quantas pessoas visitam o site, quais peças despertam interesse e se os nossos anúncios funcionam. Essas
+            ferramentas gravam cookies no seu navegador e recebem dados como páginas vistas, peças adicionadas ao pedido,
+            valor do pedido, tipo de aparelho e cidade aproximada. Seu nome e seu WhatsApp não são enviados para elas.
+          </p>
+          <p className="mt-2">
+            Para bloquear, use a navegação anônima, apague os cookies deste site ou instale o{' '}
+            <a
+              href="https://tools.google.com/dlpage/gaoptout"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2"
+            >
+              complemento de desativação do Google Analytics
+            </a>
+            . As preferências de anúncios da Meta ficam em{' '}
+            <a
+              href="https://www.facebook.com/adpreferences"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2"
+            >
+              facebook.com/adpreferences
+            </a>
+            .
+          </p>
+        </div>
+        <div>
           <h2 className="font-semibold text-malva-800">Seus direitos</h2>
           <p className="mt-1">
             É só falar com a gente pelo WhatsApp <strong>{formatBRPhone(settings.whatsapp_number)}</strong> para consultar,

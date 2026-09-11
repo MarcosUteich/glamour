@@ -11,7 +11,7 @@ import {
 } from './api'
 
 /** Fotos do produto: câmera/galeria, 1ª é a capa, arrastar para reordenar, comprime em WebP no aparelho. */
-export function PhotoUploader({ productId }: { productId: string }) {
+export function PhotoUploader({ productId, slug }: { productId: string; slug?: string }) {
   const qc = useQueryClient()
   const inputRef = useRef<HTMLInputElement>(null)
   const dragId = useRef<string | null>(null)
@@ -22,7 +22,7 @@ export function PhotoUploader({ productId }: { productId: string }) {
     mutationFn: async (files: File[]) => {
       let order = images.length
       for (const file of files) {
-        await uploadProductImage(productId, file, order++)
+        await uploadProductImage(productId, file, order++, slug)
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),

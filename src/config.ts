@@ -1,4 +1,5 @@
 import type { Settings } from './lib/types'
+import { PICKUP_TEXT } from './seo/business'
 
 export const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'https://glamouratacado.com.br').replace(/\/$/, '')
 
@@ -6,7 +7,7 @@ export const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'https://glamouratacad
 export const DEFAULT_SETTINGS: Settings = {
   whatsapp_number: '5551992275944',
   min_order_cents: 49000,
-  pickup_text: 'Glamour Acessórios · Shopping Lindoia · Porto Alegre/RS',
+  pickup_text: PICKUP_TEXT,
   hours_text: null,
   instagram_url: null,
 }

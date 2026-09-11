@@ -39,10 +39,13 @@ export function Home() {
   return (
     <>
       <title>
-        {category
-          ? `${category.name} no atacado · Glamour`
-          : 'Glamour Atacado · Semijoias, acessórios e maquiagem para revender'}
+        {slug === 'novidades'
+          ? 'Novidades no atacado | Glamour Atacado · Porto Alegre'
+          : category
+            ? `${category.name} no atacado | Glamour Atacado · Porto Alegre`
+            : 'Semijoias no atacado em Porto Alegre | Glamour Atacado'}
       </title>
+      {query && <meta name="robots" content="noindex, follow" />}
       {showHero && (
         <>
           <Hero
@@ -60,7 +63,10 @@ export function Home() {
           <SearchField value={query} onChange={(value) => setParams(value ? { busca: value } : {}, { replace: true })} />
         </div>
         <div className="mb-6 mt-7 text-center">
-          <SectionTitle>{title}</SectionTitle>
+          <SectionTitle as={showHero ? 'h2' : 'h1'}>{title}</SectionTitle>
+          {category?.description && (
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">{category.description}</p>
+          )}
           {data && (
             <p className="mt-1.5 text-xs text-muted-foreground">
               {products.length} {products.length === 1 ? 'peça' : 'peças'}

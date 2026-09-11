@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router'
 import { toast } from 'sonner'
 import { useCatalog } from '@/hooks/useCatalog'
 import { isDemo } from '@/lib/supabase'
+import { initTracking, trackPageView } from '@/lib/tracking'
 import { cn } from '@/lib/utils'
 import { useCart } from '@/store/cart'
 import { CartFab } from './CartFab'
@@ -18,6 +19,16 @@ export function StoreLayout() {
   const hasItems = useCart((s) => s.lines.length > 0)
   const onOrderPages = pathname.startsWith('/pedido')
   const previousPath = useRef(pathname)
+
+  useEffect(() => {
+    initTracking()
+  }, [])
+
+  // page_view do GA4 e do Pixel a cada troca de página, depois que o <title> novo entrou
+  useEffect(() => {
+    const timer = window.setTimeout(() => trackPageView(pathname), 300)
+    return () => window.clearTimeout(timer)
+  }, [pathname])
 
   // Entre "todas" e categorias a página não pula para o topo (os chips ficam fixos); o resto abre no topo
   useEffect(() => {

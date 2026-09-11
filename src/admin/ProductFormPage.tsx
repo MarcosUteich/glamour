@@ -258,7 +258,7 @@ export function ProductFormPage() {
 
         {editing && id ? (
           <AdminCard>
-            <PhotoUploader productId={id} />
+            <PhotoUploader productId={id} slug={product?.slug} />
           </AdminCard>
         ) : (
           <p className="rounded-xl bg-malva-100 p-3 text-[13px] text-malva-800">

@@ -35,8 +35,15 @@ export interface LastOrder {
   totalCents: number
   pieces: number
   createdAt: string
+  /** Já contado no GA4/Pixel (a página de confirmação pode ser reaberta) */
+  tracked?: boolean
 }
 
 const LAST_ORDER_KEY = 'glamour:ultimo-pedido'
 export const loadLastOrder = () => read<LastOrder>(LAST_ORDER_KEY)
 export const saveLastOrder = (order: LastOrder) => write(LAST_ORDER_KEY, order)
+
+export function markLastOrderTracked() {
+  const order = loadLastOrder()
+  if (order) saveLastOrder({ ...order, tracked: true })
+}

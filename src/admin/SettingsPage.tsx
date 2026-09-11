@@ -69,7 +69,7 @@ export function SettingsPage() {
           <Textarea
             value={form.pickup}
             onChange={(e) => setForm({ ...form, pickup: e.target.value })}
-            placeholder="Glamour Acessórios · Shopping Lindoia · Porto Alegre/RS"
+            placeholder="Glamour Acessórios · Lindóia Shopping · Loja 160 · Av. Assis Brasil, 3522 · Porto Alegre/RS"
           />
         </div>
         <div className="space-y-1.5">

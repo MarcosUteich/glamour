@@ -29,7 +29,8 @@ export async function fetchCatalog(): Promise<Catalog> {
   if (!supabase) return { categories: DEMO_CATEGORIES, products: DEMO_PRODUCTS }
 
   const [categories, products] = await Promise.all([
-    supabase.from('categories').select('id, name, slug, code_prefix, image_url, sort_order, active').eq('active', true).order('sort_order'),
+    // select('*') funciona antes e depois da migration 0006 (coluna description)
+    supabase.from('categories').select('*').eq('active', true).order('sort_order'),
     supabase.from('products').select(PRODUCT_COLUMNS).eq('active', true).order('created_at', { ascending: false }),
   ])
   if (categories.error) throw categories.error

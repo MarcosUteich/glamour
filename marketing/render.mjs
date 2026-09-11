@@ -18,12 +18,18 @@ const SITE_URL = (process.env.VITE_SITE_URL ?? 'https://glamouratacado.com.br').
 const WORDMARK = readFileSync(join(root, 'public', 'brand', 'glamour-wordmark-blush.svg'), 'utf8')
   .replace(/\s(width|height)="[^"]*"/g, '')
   .replace('<svg ', '<svg class="wordmark" ')
+// Monograma "G" para os ícones, também sem tamanho fixo
+const MONOGRAM = readFileSync(join(root, 'public', 'brand', 'glamour-g.svg'), 'utf8').replace(/\s(width|height)="[^"]*"/g, '')
 // setContent não resolve caminhos relativos: injeta o CSS compartilhado direto no HTML
 const SHARED_CSS = readFileSync(join(root, 'marketing', 'shared.css'), 'utf8')
 
-// name, template, largura, altura, formato, [utm], [precisaDominio]
+// name, template, largura, altura, formato, [scale: densidade do PNG], [out: caminho final],
+// [utm do QR], [needsDomain: só imprimir com o domínio definitivo]
 const JOBS = [
-  { name: 'og-image', tpl: 'og.html', w: 1200, h: 630, fmt: 'png' },
+  { name: 'og-image', tpl: 'og.html', w: 1200, h: 630, fmt: 'png', scale: 1, out: 'public/brand/og-image.png' },
+  { name: 'icon-512', tpl: 'icon.html', w: 512, h: 512, fmt: 'png', scale: 1, out: 'public/brand/icon-512.png' },
+  { name: 'icon-192', tpl: 'icon.html', w: 192, h: 192, fmt: 'png', scale: 1, out: 'public/brand/icon-192.png' },
+  { name: 'apple-touch-icon', tpl: 'icon.html', w: 180, h: 180, fmt: 'png', scale: 1, out: 'public/brand/apple-touch-icon.png' },
   { name: 'post-feed', tpl: 'post.html', w: 1080, h: 1080, fmt: 'png' },
   { name: 'story', tpl: 'story.html', w: 1080, h: 1920, fmt: 'png' },
   { name: 'cartaz-a4', tpl: 'cartaz.html', w: 794, h: 1123, fmt: 'pdf', utm: 'cartaz', needsDomain: true },
@@ -69,6 +75,7 @@ try {
     html = html
       .replace(/<link[^>]+shared\.css[^>]*>/, `<style>${SHARED_CSS}</style>`)
       .replace(/{{WORDMARK}}/g, WORDMARK)
+      .replace(/{{MONOGRAM}}/g, MONOGRAM)
       .replace(/{{SITE_URL}}/g, SITE_URL)
 
     if (html.includes('{{QR}}')) {
@@ -77,7 +84,8 @@ try {
       html = html.replace(/{{QR}}/g, qr)
     }
 
-    const page = await browser.newPage({ viewport: { width: job.w, height: job.h }, deviceScaleFactor: job.fmt === 'png' ? 2 : 1 })
+    const scale = job.scale ?? (job.fmt === 'png' ? 2 : 1)
+    const page = await browser.newPage({ viewport: { width: job.w, height: job.h }, deviceScaleFactor: scale })
     await page.setContent(html, { waitUntil: 'networkidle' })
     await page.evaluate(async () => {
       await document.fonts.load('600 76px Montserrat')
@@ -86,7 +94,7 @@ try {
     })
     await page.waitForTimeout(150)
 
-    const file = join(OUT, `glamour-${job.name}.${job.fmt}`)
+    const file = job.out ? join(root, job.out) : join(OUT, `glamour-${job.name}.${job.fmt}`)
     if (job.fmt === 'pdf') {
       await page.pdf({ path: file, width: `${job.w}px`, height: `${job.h}px`, printBackground: true, pageRanges: '1' })
     } else {
@@ -106,7 +114,7 @@ writeFileSync(
     '',
     'post-feed  1080x1080  Instagram/Facebook',
     'story      1080x1920  Stories e status do WhatsApp',
-    'og-image   1200x630   prévia do link (vai em public/brand/)',
+    'og-image e ícones     gerados direto em public/brand/ (prévia de link, PWA, Google)',
     'cartaz-a4  A4 PDF      vitrine/balcão — QR aponta para o site',
     'cartao-*   90x50mm PDF (com 3mm de sangria já incluídos no tamanho)',
     '',

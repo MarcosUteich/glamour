@@ -23,11 +23,11 @@ export function ProductCard({ product, fallback }: { product: Product; fallback:
   const handleAdd = () => {
     if (add(product) === 'unavailable') return
     toast.success('Adicionado ao pedido', { id: 'carrinho', description: product.name })
-    track('add_to_cart', product.id)
+    track('add_to_cart', { product })
   }
 
   const handleQuantity = (quantity: number) => {
-    if (quantity === 0) track('remove_from_cart', product.id)
+    if (quantity === 0) track('remove_from_cart', { product, quantity: line?.quantity ?? 1 })
     setQuantity(product.id, quantity)
   }
 

@@ -1,6 +1,6 @@
 # Glamour Atacado
 
-Catálogo de atacado da **Glamour Acessórios** (Shopping Lindoia, Porto Alegre). O cliente
+Catálogo de atacado da **Glamour Acessórios** (Lindóia Shopping, loja 160, Porto Alegre). O cliente
 monta um pedido de no mínimo **R$ 490** e envia pelo **WhatsApp** da loja; a retirada é na loja.
 
 Fluxo: catálogo → carrinho → pedido ≥ R$ 490 → nome + WhatsApp → mensagem pronta no WhatsApp.
@@ -33,15 +33,21 @@ Sem as chaves do Supabase o site roda em **modo demonstração** com produtos de
 
 ## Supabase
 
-Aplique na ordem, pelo SQL editor do projeto: `supabase/migrations/0001_schema.sql`,
-`0002_rls.sql`, `0003_functions.sql`, `0004_storage.sql` e depois `supabase/seed.sql`.
+Aplique na ordem, pelo SQL editor do projeto: `supabase/migrations/0001_schema.sql` a
+`0006_seo.sql` e depois `supabase/seed.sql` (ou `supabase/sample-data.sql` para ter peças de exemplo).
 Crie o usuário admin em Authentication e insira o `user_id` dele em `public.admins`.
 
 ## Deploy
 
-Vercel (`vercel.json` já tem o rewrite de SPA e o cron diário do `api/keepalive.ts`, que
-evita a pausa do plano Free do Supabase). Defina `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-e `VITE_SITE_URL` nas variáveis do projeto.
+Vercel. O `vercel.json` manda as rotas públicas para `api/page.ts`, que entrega o `index.html`
+com título, canonical e dados estruturados de cada página, e responde 404 para peça que saiu
+do catálogo. Também serve `/sitemap.xml` e `/robots.txt` e agenda o cron diário do
+`api/keepalive.ts`, que evita a pausa do plano Free do Supabase. A lógica fica em `src/seo/`,
+testada com Vitest. Defina `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SITE_URL`,
+`VITE_GA_ID` e `VITE_META_PIXEL_ID` nas variáveis do projeto.
+
+O passo a passo de Search Console, Google Analytics, Pixel da Meta e Perfil da Empresa no
+Google está em [`docs/SEO.md`](docs/SEO.md).
 
 ## Estrutura
 

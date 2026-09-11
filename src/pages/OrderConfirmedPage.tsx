@@ -10,19 +10,22 @@ import { useSettings } from '@/hooks/useCatalog'
 import { track } from '@/lib/analytics'
 import { formatBRL } from '@/lib/money'
 import { formatBRPhone } from '@/lib/phone'
-import { loadLastOrder } from '@/lib/storage'
+import { loadLastOrder, markLastOrderTracked } from '@/lib/storage'
 import { whatsappLink } from '@/lib/whatsapp'
 
 export function OrderConfirmedPage() {
   const { orderNumber } = useParams()
   const settings = useSettings()
   const [copied, setCopied] = useState(false)
-  const order = loadLastOrder()
-  const matches = order && order.orderNumber === orderNumber
+  const [order] = useState(loadLastOrder)
+  const matches = order !== null && order.orderNumber === orderNumber
 
+  // Conta o pedido no GA4/Pixel uma vez só, mesmo que a página seja reaberta
   useEffect(() => {
-    if (matches) track('order_created', null, { order_number: order.orderNumber })
-  }, [matches, order?.orderNumber])
+    if (!order || !matches || order.tracked) return
+    track('order_created', { valueCents: order.totalCents, meta: { order_number: order.orderNumber } })
+    markLastOrderTracked()
+  }, [order, matches])
 
   if (!matches) {
     return (
@@ -73,7 +76,9 @@ export function OrderConfirmedPage() {
         href={order.url}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => track('whatsapp_clicked', null, { order_number: order.orderNumber })}
+        onClick={() =>
+          track('whatsapp_clicked', { valueCents: order.totalCents, meta: { order_number: order.orderNumber } })
+        }
         className={buttonVariants({ variant: 'whatsapp', size: 'lg', className: 'mt-7 h-14 w-full text-base' })}
       >
         <WhatsAppIcon className="size-5" />

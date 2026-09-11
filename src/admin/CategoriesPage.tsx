@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
 import { slugify } from '@/lib/slug'
 import type { Category } from '@/lib/types'
 import { fetchAllCategories, reorderCategories, saveCategory } from './api'
@@ -136,6 +137,7 @@ function CategoryForm({
 }) {
   const [name, setName] = useState(category?.name ?? '')
   const [prefix, setPrefix] = useState(category?.code_prefix ?? '')
+  const [description, setDescription] = useState(category?.description ?? '')
   const [active, setActive] = useState(category?.active ?? true)
 
   return (
@@ -152,6 +154,18 @@ function CategoryForm({
           placeholder="BR"
         />
       </div>
+      <div className="space-y-1.5">
+        <Label>Descrição (opcional)</Label>
+        <Textarea
+          value={description}
+          maxLength={600}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Brincos para revender com preço de atacado: argolas, pontos de luz e modelos da moda…"
+        />
+        <p className="text-[12px] text-muted-foreground">
+          Aparece na página da categoria e no Google (lá, só as primeiras ~160 letras).
+        </p>
+      </div>
       <label className="flex items-center gap-2.5 text-sm font-medium text-malva-800">
         <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} className="size-4 accent-malva-600" />
         Mostrar no catálogo
@@ -165,6 +179,7 @@ function CategoryForm({
               {
                 name: name.trim(),
                 slug: slugify(name),
+                description: description.trim() || null,
                 code_prefix: prefix || null,
                 active,
                 sort_order: category?.sort_order ?? nextOrder,

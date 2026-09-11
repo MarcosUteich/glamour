@@ -11,7 +11,7 @@ export function HowItWorks({ minOrderCents }: { minOrderCents: number }) {
       title: `A partir de ${formatBRL(minOrderCents)}`,
       text: 'Pedido mínimo no atacado',
     },
-    { icon: <WhatsAppIcon className="size-5" />, title: 'Envie pelo WhatsApp', text: 'E retire no Shopping Lindoia' },
+    { icon: <WhatsAppIcon className="size-5" />, title: 'Envie pelo WhatsApp', text: 'E retire no Lindóia Shopping' },
   ]
 
   return (

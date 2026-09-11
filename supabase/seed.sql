@@ -1,7 +1,7 @@
 -- Glamour Atacado · dados iniciais (pode rodar mais de uma vez)
 
 insert into public.settings (id, whatsapp_number, min_order_cents, pickup_text)
-values (1, '5551992275944', 49000, 'Glamour Acessórios · Shopping Lindoia · Porto Alegre/RS')
+values (1, '5551992275944', 49000, 'Glamour Acessórios · Lindóia Shopping · Loja 160 · Av. Assis Brasil, 3522 · Porto Alegre/RS')
 on conflict (id) do nothing;
 
 insert into public.categories (name, slug, code_prefix, sort_order) values

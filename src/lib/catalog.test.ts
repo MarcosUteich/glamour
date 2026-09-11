@@ -6,6 +6,7 @@ const cat = (slug: string, name: string, order: number, active = true): Category
   id: `c-${slug}`,
   name,
   slug,
+  description: null,
   code_prefix: null,
   image_url: null,
   sort_order: order,

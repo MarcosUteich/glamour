@@ -1,5 +1,5 @@
 import { ArrowLeft, MapPin } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { CartLineRow } from '@/components/cart/CartLineRow'
@@ -37,9 +37,12 @@ export function OrderPage() {
   const customer = loadCustomer()
   const goTo = (next: Step) => setParams(next === 'carrinho' ? {} : { etapa: next }, { replace: true })
 
+  const cartViewed = useRef(false)
   useEffect(() => {
-    track('cart_view')
-  }, [])
+    if (cartViewed.current || lines.length === 0) return
+    cartViewed.current = true
+    track('cart_view', { lines, valueCents: totalCents })
+  }, [lines, totalCents])
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -141,7 +144,7 @@ export function OrderPage() {
               className="w-full"
               disabled={!progress.reached}
               onClick={() => {
-                track('checkout_started')
+                track('checkout_started', { lines, valueCents: totalCents })
                 goTo('dados')
               }}
             >

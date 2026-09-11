@@ -49,7 +49,7 @@ export async function fetchAllCategories(): Promise<Category[]> {
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('categories')
-    .select('id, name, slug, code_prefix, image_url, sort_order, active')
+    .select('*')
     .order('sort_order')
   if (error) throw error
   return data as Category[]
@@ -146,11 +146,17 @@ export async function fetchProductImages(productId: string): Promise<StoredImage
   }))
 }
 
-export async function uploadProductImage(productId: string, file: File, sortOrder: number): Promise<void> {
+export async function uploadProductImage(
+  productId: string,
+  file: File,
+  sortOrder: number,
+  /** Entra no nome do arquivo (ajuda no Google Imagens) */
+  slug?: string,
+): Promise<void> {
   const supabase = requireSupabase()
   const processed = await processProductImage(file)
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-  const base = `${productId}/${stamp}`
+  const base = `${productId}/${slug ? `${slug}-` : ''}${stamp}`
   const opts = { contentType: 'image/webp', cacheControl: '31536000', upsert: false }
 
   const [lg, sm] = await Promise.all([
@@ -184,7 +190,7 @@ export async function reorderProductImages(ids: string[]): Promise<void> {
 // Categorias --------------------------------------------------------
 
 export async function saveCategory(
-  input: Pick<Category, 'name' | 'slug' | 'code_prefix' | 'active' | 'sort_order'>,
+  input: Pick<Category, 'name' | 'slug' | 'description' | 'code_prefix' | 'active' | 'sort_order'>,
   id?: string,
 ): Promise<void> {
   const supabase = requireSupabase()

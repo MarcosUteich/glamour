@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      /* Ícone do site (apple-touch-icon, PWA, Google): "G" do letreiro em rosé sobre malva.
+         O G ocupa ~58% para caber na área segura dos ícones "maskable". */
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 100vw; height: 100vh; }
+      body { background: #a86478; display: grid; place-items: center; }
+      .g { width: 58vmin; height: 58vmin; display: grid; place-items: center; }
+      .g svg { width: 100%; height: 100%; }
+      .g path { fill: #faf6f7; }
+    </style>
+  </head>
+  <body>
+    <div class="g">{{MONOGRAM}}</div>
+  </body>
+</html>

@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -28,17 +28,18 @@ export function ProductPage() {
   const line = useCartLine(product?.id)
   const add = useCart((s) => s.add)
   const [quantity, setQuantity] = useState(1)
-  const productId = product?.id
+  const categoryName = category?.name
 
   useEffect(() => {
-    if (productId) track('product_view', productId)
-  }, [productId])
+    if (product) track('product_view', { product, category: categoryName })
+  }, [product, categoryName])
 
   if (isPending) return <ProductSkeleton />
   if (!product) {
     return (
       <div className="mx-auto max-w-md px-6 py-20 text-center">
         <title>Peça não encontrada · Glamour Atacado</title>
+        <meta name="robots" content="noindex" />
         <p className="text-lg font-semibold text-malva-800">Essa peça não está mais no catálogo.</p>
         <Link to="/" className={buttonVariants({ className: 'mt-6' })}>
           Ver o catálogo
@@ -72,21 +73,32 @@ export function ProductPage() {
       id: 'carrinho',
       description: `${qty} × ${product.name}`,
     })
-    track('add_to_cart', product.id, { quantity: qty })
+    track('add_to_cart', { product, category: category?.name, quantity: qty, meta: { quantity: qty } })
     setQuantity(1)
   }
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-16 pt-4 sm:px-6">
-      <title>{`${product.name} · Glamour Atacado`}</title>
+      <title>{`${product.name} ${product.code} · ${formatBRL(product.price_cents)} no atacado | Glamour`}</title>
       <meta name="description" content={`${product.name} (${product.code}) no atacado por ${formatBRL(product.price_cents)}.`} />
 
-      <Link
-        to={category ? `/categoria/${category.slug}` : '/'}
-        className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-malva-700"
-      >
-        <ArrowLeft className="size-4" /> {category?.name ?? 'Catálogo'}
-      </Link>
+      <nav aria-label="Você está em" className="mb-4 flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+        <Link to="/" className="shrink-0 font-medium text-malva-700 hover:underline">
+          Início
+        </Link>
+        <ChevronRight className="size-3.5 shrink-0" aria-hidden />
+        {category && (
+          <>
+            <Link to={`/categoria/${category.slug}`} className="shrink-0 font-medium text-malva-700 hover:underline">
+              {category.name}
+            </Link>
+            <ChevronRight className="size-3.5 shrink-0" aria-hidden />
+          </>
+        )}
+        <span className="truncate" aria-current="page">
+          {product.name}
+        </span>
+      </nav>
 
       <div className="grid gap-8 md:grid-cols-2 md:gap-12">
         <Gallery photos={product.photos} fallback={fallback} alt={product.name} />

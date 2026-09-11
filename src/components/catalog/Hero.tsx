@@ -13,6 +13,9 @@ export function Hero({ minOrderCents, onShop }: { minOrderCents: number; onShop:
         </p>
         <h1 className="mt-3 text-[34px] font-semibold leading-tight tracking-tight text-malva-800 sm:text-5xl">
           Revenda Glamour
+          <span className="mt-2 block text-base font-medium tracking-normal text-malva-600 sm:text-lg">
+            Semijoias no atacado em Porto Alegre
+          </span>
         </h1>
         <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-malva-800/85 sm:text-lg">
           Semijoias, acessórios e maquiagem selecionados para o seu negócio.
@@ -23,7 +26,7 @@ export function Hero({ minOrderCents, onShop }: { minOrderCents: number; onShop:
             <ShoppingBag className="size-4 text-dourado" /> Pedido mínimo {formatBRL(minOrderCents)}
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/75 px-3.5 py-2">
-            <MapPin className="size-4 text-dourado" /> Retirada no Shopping Lindoia
+            <MapPin className="size-4 text-dourado" /> Retirada no Lindóia Shopping
           </span>
         </div>
         <Button size="lg" className="mt-7 w-full max-w-xs" onClick={onShop}>
