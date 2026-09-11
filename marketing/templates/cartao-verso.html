@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../shared.css" />
+    <style>
+      body { width: 366px; height: 214px; }
+      .art { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: 20px; padding: 0 30px; }
+      .frame { inset: 16px; }
+      .qr { background: var(--blush); border-radius: 12px; padding: 12px; }
+      .qr svg { width: 96px; height: 96px; display: block; }
+      .info { font-weight: 300; font-size: 12px; line-height: 1.85; }
+      .info .t { font-weight: 600; font-size: 13px; letter-spacing: 0.04em; }
+      .info .g { color: var(--dourado-claro); }
+    </style>
+  </head>
+  <body>
+    <div class="art">
+      <div class="frame"></div>
+      <div class="qr">{{QR}}</div>
+      <div class="info">
+        <p class="t">Catálogo de atacado</p>
+        <p>Aponte a câmera para o QR</p>
+        <p class="g">(51) 99227-5944</p>
+        <p>Shopping Lindoia · Porto Alegre</p>
+      </div>
+    </div>
+  </body>
+</html>

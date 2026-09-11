@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../shared.css" />
+    <style>
+      /* 90x50mm + 3mm sangria = 96x56mm ≈ 366x214px @96dpi */
+      body { width: 366px; height: 214px; }
+      .art { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .frame { inset: 16px; }
+      .wordmark { width: 62%; }
+      .sub { font-weight: 300; letter-spacing: 0.5em; text-transform: uppercase; font-size: 11px; color: var(--blush); margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="art">
+      <div class="frame"></div>
+      {{WORDMARK}}
+      <p class="sub">atacado</p>
+    </div>
+  </body>
+</html>

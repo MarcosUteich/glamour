@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../shared.css" />
+    <style>
+      body { width: 1080px; height: 1080px; }
+      .art { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 118px 90px 90px; }
+      .top { display: flex; flex-direction: column; align-items: center; }
+      .necklace { position: static; width: 300px; margin-bottom: 26px; opacity: 0.85; }
+      .wordmark { width: 440px; }
+      .sub { font-weight: 300; letter-spacing: 0.42em; text-transform: uppercase; font-size: 21px; color: var(--blush); margin-top: 14px; }
+      .mid { display: flex; flex-direction: column; align-items: center; text-align: center; }
+      .headline { font-size: 68px; font-weight: 600; letter-spacing: -0.01em; }
+      .lead { font-size: 27px; font-weight: 300; margin-top: 20px; max-width: 640px; line-height: 1.5; }
+      .pill { font-size: 24px; padding: 15px 38px; margin-top: 34px; }
+      .foot { display: flex; flex-direction: column; align-items: center; }
+      .foot .script { font-size: 38px; }
+      .foot .info { font-size: 17px; font-weight: 300; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dourado-claro); margin-top: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="art">
+      <div class="frame"></div>
+      <div class="top">
+        <svg class="necklace" viewBox="0 0 320 150">
+          <path d="M20 12 Q160 180 300 12" stroke-width="2.5" />
+          <circle cx="76" cy="60" r="3.6" /><circle cx="110" cy="78" r="3.6" />
+          <circle cx="210" cy="78" r="3.6" /><circle cx="244" cy="60" r="3.6" />
+          <path d="M160 90 v11" stroke-width="2" />
+          <path d="M160 101 L171 116 L160 131 L149 116 Z" fill="#c4a062" stroke="none" />
+        </svg>
+        {{WORDMARK}}
+        <p class="sub">atacado</p>
+      </div>
+
+      <div class="mid">
+        <h1 class="headline">Agora no atacado</h1>
+        <p class="lead">Semijoias, acessórios e maquiagem selecionados para você revender</p>
+        <span class="pill">Pedido mínimo R$ 490</span>
+      </div>
+
+      <div class="foot">
+        <p class="script">peças para você brilhar</p>
+        <p class="info">Retirada no Shopping Lindoia · Catálogo no link da bio</p>
+      </div>
+    </div>
+  </body>
+</html>

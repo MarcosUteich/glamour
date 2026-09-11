@@ -1,0 +1,101 @@
+/* Base das artes Glamour — malva + dourado, tipografia Montserrat + Yellowtail */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Yellowtail&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --malva: #a86478;
+  --malva-escuro: #8e4f64;
+  --malva-profundo: #5e3242;
+  --blush: #faf6f7;
+  --rose: #f3e7eb;
+  --creme: #f6ecd9;
+  --dourado: #c4a062;
+  --dourado-claro: #e3cfa3;
+  --tinta: #2e1f25;
+}
+
+.art {
+  font-family: 'Montserrat', sans-serif;
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+  background: var(--malva);
+}
+
+.frame {
+  position: absolute;
+  inset: 40px;
+  border: 2px solid rgba(227, 207, 163, 0.55);
+}
+
+.wordmark {
+  width: 62%;
+  display: block;
+  margin: 0 auto;
+}
+
+.wordmark path {
+  fill: var(--blush);
+}
+.wordmark .dots path {
+  fill: var(--dourado-claro);
+}
+
+.kicker {
+  font-weight: 300;
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  color: var(--dourado-claro);
+}
+
+.script {
+  font-family: 'Yellowtail', cursive;
+  color: var(--dourado-claro);
+  font-weight: 400;
+}
+
+.pill {
+  display: inline-block;
+  background: var(--creme);
+  color: var(--malva-profundo);
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+.divider span {
+  height: 1px;
+  width: 70px;
+  background: rgba(227, 207, 163, 0.6);
+}
+.divider i {
+  width: 9px;
+  height: 9px;
+  background: var(--dourado);
+  transform: rotate(45deg);
+}
+
+.necklace {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0.9;
+}
+.necklace path {
+  stroke: var(--dourado);
+  fill: none;
+  stroke-linecap: round;
+}
+.necklace circle {
+  fill: var(--dourado);
+}

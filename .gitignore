@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+*.tsbuildinfo
+*.local
+.vercel
+marketing/out
+.DS_Store
+Thumbs.db
