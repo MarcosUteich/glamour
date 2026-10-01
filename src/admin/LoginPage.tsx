@@ -1,24 +1,53 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router'
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
 import { Wordmark } from '@/components/brand/Wordmark'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { requireSupabase } from '@/lib/supabase'
 
+const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim()
 export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const turnstileRef = useRef<TurnstileInstance | null>(null)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading) return
     setError(null)
+
+    if (turnstileSiteKey && !captchaToken) {
+      setError('Confirme que você não é um robô.')
+      return
+    }
+
     setLoading(true)
-    const { error } = await requireSupabase().auth.signInWithPassword({ email: email.trim(), password })
-    setLoading(false)
-    if (error) setError('E-mail ou senha incorretos.')
+    try {
+      const { error } = await requireSupabase().auth.signInWithPassword({
+        email: email.trim(),
+        password,
+        options: captchaToken ? { captchaToken } : undefined,
+      })
+
+      if (error) {
+        setError(error.code === 'captcha_failed'
+          ? 'A verificação de segurança falhou. Confirme o CAPTCHA novamente.'
+          : error.code === 'invalid_credentials'
+            ? 'E-mail ou senha incorretos.'
+            : 'Não foi possível entrar. Tente novamente.')
+      }
+    } catch {
+      setError('Não foi possível conectar ao serviço de login. Tente novamente.')
+    } finally {
+      setLoading(false)
+      turnstileRef.current?.reset()
+      setCaptchaToken(null)
+    }
   }
 
   return (
@@ -51,8 +80,29 @@ export function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
+          {turnstileSiteKey && (
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={turnstileSiteKey}
+              options={{ language: 'pt-br', theme: 'light' }}
+              onSuccess={(token) => {
+                setCaptchaToken(token)
+                setError(null)
+              }}
+              onExpire={() => setCaptchaToken(null)}
+              onError={() => {
+                setCaptchaToken(null)
+                setError('Não foi possível validar o CAPTCHA. Tente novamente.')
+              }}
+            />
+          )}
           {error && <p className="text-[13px] text-destructive">{error}</p>}
-          <Button type="submit" size="lg" className="w-full" disabled={loading}>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={loading || (!!turnstileSiteKey && !captchaToken)}
+          >
             {loading ? 'Entrando…' : 'Entrar'}
           </Button>
         </form>
