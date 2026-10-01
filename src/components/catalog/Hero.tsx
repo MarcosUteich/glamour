@@ -25,7 +25,7 @@ export function Hero({
 
       {/* ───────── MOBILE / TABLET (<1024px): foto + texto em HTML ───────── */}
       <div className="lg:hidden">
-        <div className="relative mx-auto w-full max-w-[640px]">
+        <div className="relative mx-auto w-full max-w-160">
           <img
             src="/hero-mobile.jpg"
             alt=""
@@ -37,10 +37,10 @@ export function Hero({
             decoding="async"
           />
           {/* degradê que dissolve a foto no fundo rosado */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#f8e5e2] via-[#f8e5e2]/70 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-[#f8e5e2] via-[#f8e5e2]/70 to-transparent" />
         </div>
 
-        <div className="relative mx-auto -mt-6 max-w-[640px] px-6 pb-9 sm:px-10">
+        <div className="relative mx-auto -mt-6 max-w-160 px-6 pb-9 sm:px-10">
           <div className="flex items-center gap-3">
             <span className="text-[11px] font-medium tracking-[0.35em] text-[#8c4a63]">
               ATACADO
@@ -81,7 +81,7 @@ export function Hero({
           <button
             type="button"
             onClick={onShop}
-            className="mt-7 inline-flex h-12 w-full items-center justify-center rounded-full bg-[#8c4a63] px-8 text-sm font-semibold tracking-wide text-white shadow-[0_8px_20px_-8px_rgba(140,74,99,0.7)] transition active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8c4a63] sm:w-auto"
+            className="mt-7 inline-flex h-12 w-full items-center justify-center rounded-full bg-[#8c4a63] px-8 text-sm font-semibold tracking-wide text-white shadow-[0_8px_20px_-8px_rgba(140,74,99,0.7)] transition active:scale-[0.98] focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-[#8c4a63] sm:w-auto"
           >
             Ver as peças
           </button>

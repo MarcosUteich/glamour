@@ -100,10 +100,10 @@ export function ProductPage() {
         </span>
       </nav>
 
-      <div className="grid gap-8 md:grid-cols-2 md:gap-12">
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-12">
         <Gallery photos={product.photos} fallback={fallback} alt={product.name} />
 
-        <div>
+        <div className="min-w-0">
           {isNewProduct(product.created_at) && <Badge variant="gold">Novidade</Badge>}
           <h1 className="mt-2 text-2xl font-semibold leading-tight text-tinta sm:text-3xl">{product.name}</h1>
           <p className="mt-1 text-sm text-muted-foreground">Código {product.code}</p>
@@ -174,7 +174,7 @@ function Gallery({ photos, fallback, alt }: { photos: ProductPhoto[]; fallback: 
   const list = photos.length > 0 ? photos : [{ sm: fallback, lg: fallback }]
 
   return (
-    <div>
+    <div className="min-w-0">
       <div
         className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto rounded-3xl bg-malva-100"
         onScroll={(e) => {
@@ -209,9 +209,9 @@ function Gallery({ photos, fallback, alt }: { photos: ProductPhoto[]; fallback: 
 
 function ProductSkeleton() {
   return (
-    <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 md:grid-cols-2">
+    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-8 sm:px-6 md:grid-cols-2">
       <Skeleton className="aspect-square w-full rounded-3xl" />
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         <Skeleton className="h-8 w-3/4" />
         <Skeleton className="h-4 w-1/3" />
         <Skeleton className="h-10 w-1/3" />

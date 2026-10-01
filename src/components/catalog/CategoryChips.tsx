@@ -21,7 +21,7 @@ export function CategoryChips({ categories, active }: CategoryChipsProps) {
   }, [active, categories.length])
 
   return (
-    <nav aria-label="Categorias" className="sticky top-16 z-30 border-b border-border/70 bg-background/95 backdrop-blur">
+    <nav aria-label="Categorias" className="sticky flex justify-center top-16 z-30 border-b border-border/70 bg-background/95 backdrop-blur">
       <div ref={scroller} className="no-scrollbar mx-auto flex max-w-6xl gap-2 overflow-x-auto px-3 py-2.5 sm:px-6">
         <Chip to="/" active={active === null}>
           Todos

@@ -20,8 +20,8 @@ export function DrawerContent({ className, children, side = 'bottom', ...props }
         className={cn(
           'fixed z-50 flex flex-col bg-background outline-none',
           side === 'bottom'
-            ? 'inset-x-0 bottom-0 max-h-[92dvh] rounded-t-3xl'
-            : 'inset-y-0 left-0 h-dvh w-[86vw] max-w-sm overflow-hidden rounded-r-3xl',
+            ? 'inset-x-0 bottom-0 max-h-[92dvh]'
+            : 'inset-y-0 left-0 h-dvh w-[86vw] max-w-sm overflow-hidden',
           className,
         )}
         {...props}
