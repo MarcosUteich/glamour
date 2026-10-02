@@ -1,5 +1,6 @@
 import { ChevronDown, Search } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile'
 import { GoldDivider } from '@/components/brand/Ornaments'
 import { OrderStatusBadge } from '@/components/store/OrderStatusBadge'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,7 @@ import type { CustomerOrder } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const dateFmt = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim()
 
 type Status = 'idle' | 'loading' | 'error' | 'done'
 
@@ -24,6 +26,8 @@ export function MyOrdersPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [orders, setOrders] = useState<CustomerOrder[]>([])
   const [searchedPhone, setSearchedPhone] = useState('')
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileInstance | null>(null)
 
   const search = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,6 +36,13 @@ export function MyOrdersPage() {
       setErrorMessage('Use DDD + número, como (51) 99999-9999.')
       return
     }
+
+    if (turnstileSiteKey && !captchaToken) {
+      setStatus('error')
+      setErrorMessage('Confirme que você não é um robô.')
+      return
+    }
+
     setStatus('loading')
     try {
       const result = await fetchOrdersByPhone(phone)
@@ -41,6 +52,9 @@ export function MyOrdersPage() {
     } catch (error) {
       setStatus('error')
       setErrorMessage(error instanceof OrderError ? orderLookupErrorMessage(error.code) : orderLookupErrorMessage(''))
+    } finally {
+      turnstileRef.current?.reset()
+      setCaptchaToken(null)
     }
   }
 
@@ -53,24 +67,50 @@ export function MyOrdersPage() {
         Digite o WhatsApp usado no pedido para ver o histórico. Não é preciso senha nem cadastro.
       </p>
 
-      <form onSubmit={search} className="mt-7 space-y-1.5">
-        <Label htmlFor="phone">WhatsApp</Label>
-        <div className="flex gap-2">
-          <Input
-            id="phone"
-            type="tel"
-            inputMode="numeric"
-            autoComplete="tel-national"
-            placeholder="(51) 99999-9999"
-            aria-invalid={status === 'error'}
-            value={phone}
-            onChange={(e) => setPhone(formatBRPhone(e.target.value))}
-          />
-          <Button type="submit" size="default" disabled={status === 'loading'} className="shrink-0">
-            <Search /> {status === 'loading' ? 'Buscando…' : 'Ver'}
-          </Button>
+      <form onSubmit={search} className="mt-7 space-y-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="phone">WhatsApp</Label>
+          <div className="flex gap-2">
+            <Input
+              id="phone"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel-national"
+              placeholder="(51) 99999-9999"
+              aria-invalid={status === 'error'}
+              value={phone}
+              onChange={(e) => setPhone(formatBRPhone(e.target.value))}
+            />
+            <Button
+              type="submit"
+              size="default"
+              disabled={status === 'loading' || (!!turnstileSiteKey && !captchaToken)}
+              className="shrink-0"
+            >
+              <Search /> {status === 'loading' ? 'Buscando…' : 'Ver'}
+            </Button>
+          </div>
         </div>
-        {status === 'error' && <p className="text-[13px] text-destructive">{errorMessage}</p>}
+        {turnstileSiteKey && (
+          <div className="flex justify-center sm:justify-start">
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={turnstileSiteKey}
+              options={{ language: 'pt-br', theme: 'light' }}
+              onSuccess={(token) => {
+                setCaptchaToken(token)
+                if (status === 'error') setErrorMessage('')
+              }}
+              onExpire={() => setCaptchaToken(null)}
+              onError={() => {
+                setCaptchaToken(null)
+                setStatus('error')
+                setErrorMessage('Não foi possível validar o CAPTCHA. Tente novamente.')
+              }}
+            />
+          </div>
+        )}
+        {status === 'error' && errorMessage && <p className="text-[13px] text-destructive">{errorMessage}</p>}
       </form>
 
       <GoldDivider className="my-8" />
