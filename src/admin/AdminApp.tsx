@@ -7,6 +7,7 @@ import { useAuth } from './auth-context'
 import { CategoriesPage } from './CategoriesPage'
 import { DashboardPage } from './DashboardPage'
 import { LoginPage } from './LoginPage'
+import { LeadsPage } from './LeadsPage'
 import { OrderDetailPage } from './OrderDetailPage'
 import { OrdersPage } from './OrdersPage'
 import { ProductFormPage } from './ProductFormPage'
@@ -41,6 +42,7 @@ function Gate() {
         <Route index element={<DashboardPage />} />
         <Route path="pedidos" element={<OrdersPage />} />
         <Route path="pedidos/:id" element={<OrderDetailPage />} />
+        <Route path="leads/*" element={<LeadsPage />} />
         <Route path="produtos" element={<ProductsPage />} />
         <Route path="produtos/novo" element={<ProductFormPage />} />
         <Route path="produtos/:id/editar" element={<ProductFormPage />} />

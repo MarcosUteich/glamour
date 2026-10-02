@@ -1,4 +1,4 @@
-import { BarChart3, LogOut, Package, ClipboardList, Settings2, Tags } from 'lucide-react'
+import { BarChart3, LogOut, Package, ClipboardList, Settings2, Tags, Users } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router'
 import { Wordmark } from '@/components/brand/Wordmark'
@@ -8,6 +8,7 @@ import { useAuth } from './auth-context'
 const NAV = [
   { to: '/admin', end: true, label: 'Início', icon: BarChart3 },
   { to: '/admin/pedidos', label: 'Pedidos', icon: ClipboardList },
+  { to: '/admin/leads', label: 'Leads', icon: Users },
   { to: '/admin/produtos', label: 'Produtos', icon: Package },
   { to: '/admin/categorias', label: 'Categorias', icon: Tags },
   { to: '/admin/config', label: 'Config', icon: Settings2 },
@@ -37,7 +38,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               )
             }
           >
-            <item.icon className="size-5 sm:size-[18px]" strokeWidth={1.8} />
+            <item.icon className="size-5 sm:size-4.5" strokeWidth={1.8} />
             {item.label}
           </NavLink>
         ))}
@@ -46,12 +47,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           onClick={signOut}
           className="hidden items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:bg-malva-50 sm:mt-auto sm:flex"
         >
-          <LogOut className="size-[18px]" strokeWidth={1.8} />
+          <LogOut className="size-4.5" strokeWidth={1.8} />
           Sair
         </button>
       </aside>
 
-      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-8">
+      <div className="mx-auto px-4 py-6 sm:px-8">
         <div className="mb-4 flex items-center justify-between sm:hidden">
           <Wordmark className="w-24 text-malva-500" dotsClassName="fill-dourado" />
           <button type="button" onClick={signOut} className="text-sm font-medium text-muted-foreground">
