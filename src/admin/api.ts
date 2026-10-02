@@ -152,10 +152,11 @@ export async function uploadProductImage(
   sortOrder: number,
   /** Entra no nome do arquivo (ajuda no Google Imagens) */
   slug?: string,
+  imageId?: string,
 ): Promise<void> {
   const supabase = requireSupabase()
   const processed = await processProductImage(file)
-  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const stamp = imageId ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const base = `${productId}/${slug ? `${slug}-` : ''}${stamp}`
   const opts = { contentType: 'image/webp', cacheControl: '31536000', upsert: false }
 
@@ -163,15 +164,29 @@ export async function uploadProductImage(
     supabase.storage.from('product-images').upload(`${base}-lg.webp`, processed.lg, opts),
     supabase.storage.from('product-images').upload(`${base}-sm.webp`, processed.sm, opts),
   ])
-  if (lg.error) throw lg.error
-  if (sm.error) throw sm.error
+  for (const result of [lg, sm]) {
+    const error = result.error
+    if (!error) continue
+    const code = (error as typeof error & { code?: string }).code
+    const alreadyUploaded = error.statusCode === '409' || error.status === 409 ||
+      code === 'ResourceAlreadyExists' || code === 'KeyAlreadyExists' || code === 'already_exists' ||
+      (error.status === 400 && /^(the resource already exists|asset already exists)$/i.test(error.message))
+    // A retry may find a size uploaded on the previous attempt. Keep that file,
+    // avoiding Storage upserts, which would require additional SELECT permissions.
+    if (!imageId || !alreadyUploaded) throw error
+  }
 
-  const { error } = await supabase.from('product_images').insert({
+  const row = {
+    ...(imageId ? { id: imageId } : {}),
     product_id: productId,
     path_lg: `${base}-lg.webp`,
     path_sm: `${base}-sm.webp`,
     sort_order: sortOrder,
-  })
+  }
+  // A stable ID makes retries safe even if the server saved a photo but its response was lost.
+  const { error } = imageId
+    ? await supabase.from('product_images').upsert(row, { onConflict: 'id' })
+    : await supabase.from('product_images').insert(row)
   if (error) throw error
 }
 

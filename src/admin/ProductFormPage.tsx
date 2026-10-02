@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -8,10 +8,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { centsToInput, parseBRLToCents } from '@/lib/money'
+import { maskProductPrice, maskProductSize, maskProductWeight } from '@/lib/product-masks'
 import { slugify } from '@/lib/slug'
 import type { Product } from '@/lib/types'
-import { fetchAllCategories, fetchProduct, saveProduct, suggestCode, type ProductInput } from './api'
+import { fetchAllCategories, fetchProduct, suggestCode, type ProductInput } from './api'
 import { PhotoUploader } from './PhotoUploader'
+import { PhotoUploadError, saveProductWithPhotos, type PendingPhoto } from './product-save'
 import { AdminCard, PageTitle } from './ui'
 
 type Draft = {
@@ -57,7 +59,7 @@ function fromProduct(p: Product): Draft {
     description: p.description ?? '',
     material: p.material ?? '',
     plating: p.plating ?? '',
-    size: p.size ?? '',
+    size: maskProductSize(p.size ?? ''),
     shade: p.shade ?? '',
     weight: p.weight_g?.toString().replace('.', ',') ?? '',
     active: p.active,
@@ -65,6 +67,12 @@ function fromProduct(p: Product): Draft {
 }
 
 export function ProductFormPage() {
+  const { id } = useParams()
+  const [params] = useSearchParams()
+  return <ProductForm key={id ?? `new:${params.get('duplicar') ?? ''}`} />
+}
+
+function ProductForm() {
   const { id } = useParams()
   const [params] = useSearchParams()
   const duplicateOf = params.get('duplicar')
@@ -79,6 +87,11 @@ export function ProductFormPage() {
     enabled: !!(id ?? duplicateOf),
   })
 
+  const [photos, setPhotos] = useState<PendingPhoto[]>([])
+  const [createdId, setCreatedId] = useState<string>()
+  const savedIdRef = useRef<string | undefined>(id)
+  const [saveProgress, setSaveProgress] = useState('')
+  const [photoError, setPhotoError] = useState(false)
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [seededFrom, setSeededFrom] = useState<Product | null>(null)
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }))
@@ -103,9 +116,14 @@ export function ProductFormPage() {
   if (!draft.code.trim()) errors.code = 'Informe o código'
   if (priceCents === null || priceCents <= 0) errors.price = 'Preço inválido'
   if (draft.controlsStock && !/^\d+$/.test(draft.stock.trim())) errors.stock = 'Quantidade inválida'
+  if (draft.weight && (!/^\d{1,6}(,\d{0,2})?$/.test(draft.weight) || Number(draft.weight.replace(',', '.')) <= 0)) {
+    errors.weight = 'Informe um peso maior que zero'
+  }
 
   const mutation = useMutation({
     mutationFn: async ({ next }: { next: boolean }) => {
+      setPhotoError(false)
+      setSaveProgress('Salvando produto…')
       const weight = draft.weight.trim() ? Number(draft.weight.replace(',', '.')) : null
       const input: ProductInput = {
         category_id: draft.category_id,
@@ -122,14 +140,32 @@ export function ProductFormPage() {
         stock: draft.controlsStock ? Number(draft.stock) : null,
         active: draft.active,
       }
-      const savedId = await saveProduct(input, id)
+      let uploaded = 0
+      const savedId = await saveProductWithPhotos(input, id ?? savedIdRef.current, photos,
+        (productId) => {
+          savedIdRef.current = productId
+          setCreatedId(productId)
+          if (photos.length) setSaveProgress(`Enviando fotos (0/${photos.length})…`)
+        },
+        (photoId) => {
+          setPhotos((pending) => pending.filter((photo) => photo.id !== photoId))
+          uploaded++
+          setSaveProgress(`Enviando fotos (${uploaded}/${photos.length})…`)
+        },
+      )
       return { savedId, next }
     },
     onSuccess: ({ savedId, next }) => {
       qc.invalidateQueries({ queryKey: ['admin-products'] })
       qc.invalidateQueries({ queryKey: ['catalog'] })
+      qc.invalidateQueries({ queryKey: ['admin-product', savedId] })
+      qc.invalidateQueries({ queryKey: ['product-images', savedId] })
       toast.success(editing ? 'Produto salvo' : 'Produto cadastrado')
+      setPhotos([])
+      setPhotoError(false)
       if (next) {
+        savedIdRef.current = undefined
+        setCreatedId(undefined)
         setDraft((d) => ({ ...EMPTY, category_id: d.category_id, material: d.material, plating: d.plating, active: true }))
         navigate('/admin/produtos/novo', { replace: true })
       } else {
@@ -137,6 +173,14 @@ export function ProductFormPage() {
       }
     },
     onError: (error: { message?: string }) => {
+      if (error instanceof PhotoUploadError) {
+        setPhotoError(true)
+        qc.invalidateQueries({ queryKey: ['product-images', error.productId] })
+        qc.invalidateQueries({ queryKey: ['admin-products'] })
+        qc.invalidateQueries({ queryKey: ['catalog'] })
+        toast.error('Produto salvo, mas algumas fotos não foram enviadas. Tente salvar novamente.')
+        return
+      }
       toast.error(error.message?.includes('duplicate') ? 'Já existe um produto com esse código' : 'Não foi possível salvar')
     },
   })
@@ -151,7 +195,7 @@ export function ProductFormPage() {
       </Link>
       <PageTitle>{editing ? 'Editar produto' : 'Novo produto'}</PageTitle>
 
-      <div className="space-y-4">
+      <fieldset disabled={mutation.isPending} className="min-w-0 space-y-4">
         <AdminCard className="space-y-4">
           <Field label="Categoria" error={errors.category_id}>
             <select
@@ -178,11 +222,11 @@ export function ProductFormPage() {
             <Field label="Código" error={errors.code}>
               <Input value={draft.code} onChange={(e) => set('code', e.target.value.toUpperCase())} placeholder="BR-102" />
             </Field>
-            <Field label="Preço de atacado" error={errors.price}>
+            <Field label="Preço de atacado (R$)" error={errors.price}>
               <Input
                 inputMode="decimal"
                 value={draft.price}
-                onChange={(e) => set('price', e.target.value)}
+                onChange={(e) => set('price', maskProductPrice(e.target.value))}
                 placeholder="24,90"
               />
             </Field>
@@ -233,16 +277,16 @@ export function ProductFormPage() {
               </Field>
             )}
             <Field label="Tamanho">
-              <Input value={draft.size} onChange={(e) => set('size', e.target.value)} placeholder="2,5 cm" />
+              <Input value={draft.size} onChange={(e) => set('size', maskProductSize(e.target.value))} placeholder="2,5 cm" />
             </Field>
             <Field label="Material">
               <Input value={draft.material} onChange={(e) => set('material', e.target.value)} placeholder="Latão" />
             </Field>
-            <Field label="Peso (g)">
+            <Field label="Peso (g)" error={errors.weight}>
               <Input
                 inputMode="decimal"
                 value={draft.weight}
-                onChange={(e) => set('weight', e.target.value)}
+                onChange={(e) => set('weight', maskProductWeight(e.target.value))}
                 placeholder="3,2"
               />
             </Field>
@@ -256,19 +300,23 @@ export function ProductFormPage() {
           </Field>
         </AdminCard>
 
-        {editing && id ? (
-          <AdminCard>
-            <PhotoUploader productId={id} slug={product?.slug} />
-          </AdminCard>
-        ) : (
-          <p className="rounded-xl bg-malva-100 p-3 text-[13px] text-malva-800">
-            Salve o produto para adicionar as fotos.
-          </p>
-        )}
+        <AdminCard>
+          <PhotoUploader
+            productId={id ?? createdId}
+            photos={photos}
+            onChange={setPhotos}
+            disabled={mutation.isPending}
+          />
+          {photoError && (
+            <p role="alert" className="mt-3 text-[13px] text-destructive">
+              O produto já foi salvo. As fotos pendentes continuam aqui; clique em salvar para tentar novamente.
+            </p>
+          )}
+        </AdminCard>
 
         <div className="sticky bottom-16 z-10 flex gap-2 border-t border-border bg-background/95 py-3 backdrop-blur sm:bottom-0">
           <Button className="flex-1" disabled={!canSave} onClick={() => mutation.mutate({ next: false })}>
-            {editing ? 'Salvar' : 'Cadastrar'}
+            {mutation.isPending ? saveProgress : photoError ? 'Salvar e reenviar fotos' : editing ? 'Salvar' : 'Cadastrar'}
           </Button>
           {!editing && (
             <Button variant="outline" disabled={!canSave} onClick={() => mutation.mutate({ next: true })}>
@@ -276,7 +324,7 @@ export function ProductFormPage() {
             </Button>
           )}
         </div>
-      </div>
+      </fieldset>
     </div>
   )
 }
