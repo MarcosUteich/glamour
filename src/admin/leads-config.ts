@@ -47,7 +47,7 @@ const STORAGE_KEY_OVERRIDES = 'glamour_leads_overrides_v1'
 
 export const DEFAULT_CONFIG: LeadScrapingConfig = {
   apifyToken: '',
-  n8nWebhookUrl: '',
+  n8nWebhookUrl: 'https://n8n.glamourlindoia.com.br/webhook/leads-scraping',
   sheetId: '1ARtBNXi9JHnK7fzSeectXe8K_aEyGA1iyXnqOzieJsw',
   sheetName: 'Página1',
 }
