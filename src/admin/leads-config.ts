@@ -17,7 +17,7 @@ export interface ScrapingPayload {
   apifyToken?: string
 }
 
-export type LeadStatus = 'novo' | 'sem_resposta' | 'respondido' | 'interessado' | 'cliente' | 'sem_interesse'
+export type LeadStatus = 'novo' | 'sem_resposta' | 'segundo_contato' | 'respondido' | 'interessado' | 'cliente' | 'sem_interesse'
 
 export interface SheetLead {
   id: number
@@ -158,6 +158,7 @@ function normalizeStatus(rawStatus: string): LeadStatus {
     .toLowerCase()
     .trim()
 
+  if (s.includes('segundo') || s.includes('2 contato') || s.includes('follow') || s === 'segundo_contato') return 'segundo_contato'
   if (s.includes('sem resposta') || s === 'sem_resposta') return 'sem_resposta'
   if (s.includes('respondido')) return 'respondido'
   if (s.includes('interessado')) return 'interessado'
@@ -173,7 +174,7 @@ export async function fetchLeadsFromSheet(config?: LeadScrapingConfig): Promise<
   }
 
   const sheetNameEncoded = encodeURIComponent(cfg.sheetName || 'Página1')
-  // URLs para consulta de Google Sheets
+
   const gvizUrl = `https://docs.google.com/spreadsheets/d/${cfg.sheetId}/gviz/tq?tqx=out:csv&sheet=${sheetNameEncoded}`
   const exportUrl = `https://docs.google.com/spreadsheets/d/${cfg.sheetId}/export?format=csv&gid=0`
 
