@@ -9,7 +9,7 @@ import {
   Sheet,
   X,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -73,29 +73,44 @@ export function LeadsPage() {
 
   const selectedLead = leads.find((lead) => lead.id === selectedId) || null
 
+  const pendingRef = useRef<Map<string, SheetLead>>(new Map())
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const toastId = useRef<string | number | null>(null)
+
+  const flushPending = useCallback(async () => {
+    const entries = Array.from(pendingRef.current.values())
+    if (entries.length === 0) return
+    pendingRef.current.clear()
+
+    toastId.current = toast.loading(`Salvando ${entries.length > 1 ? `${entries.length} leads` : '1 lead'}…`)
+    try {
+      await Promise.all(entries.map((lead) => triggerN8nUpdateLead(lead, {})))
+      toast.success('Salvo no Google Sheets ✓', { id: toastId.current })
+    } catch (err) {
+      toast.error('Erro ao salvar no Sheets. Verifique o n8n.', { id: toastId.current })
+      console.warn('Erro ao sincronizar com Google Sheets via n8n:', err)
+    }
+  }, [])
+
   const updateLead = (id: number, patch: Partial<SheetLead>) => {
-    let targetLead: SheetLead | null = null
     setLeads((items) =>
       items.map((lead) => {
         if (lead.id === id) {
           const updated = { ...lead, ...patch }
-          targetLead = updated
           saveLeadOverride(lead.leadKey, {
             status: updated.status,
             notes: updated.notes,
             lastContact: updated.lastContact,
           })
+          pendingRef.current.set(updated.leadKey, updated)
           return updated
         }
         return lead
       }),
     )
 
-    if (targetLead) {
-      triggerN8nUpdateLead(targetLead, patch).catch((err) => {
-        console.warn('Erro ao sincronizar com Google Sheets via n8n:', err)
-      })
-    }
+    if (debounceTimer.current) clearTimeout(debounceTimer.current)
+    debounceTimer.current = setTimeout(flushPending, 2500)
   }
 
   const closeDetail = () => setSelectedId(null)
