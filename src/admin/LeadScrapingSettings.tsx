@@ -63,7 +63,7 @@ export function LeadScrapingSettings() {
 
           <label className="block text-sm font-medium text-malva-800">
             <div className="flex items-center justify-between">
-              <span>URL do Webhook do n8n</span>
+              <span>URL do Webhook de Busca (Scraping) n8n</span>
             </div>
             <Input
               className="mt-2"
@@ -72,10 +72,28 @@ export function LeadScrapingSettings() {
               spellCheck={false}
               value={config.n8nWebhookUrl}
               onChange={(event) => setConfig({ ...config, n8nWebhookUrl: event.target.value })}
-              placeholder="https://seu-n8n.com/webhook/leads-scraping"
+              placeholder="https://n8n.glamourlindoia.com.br/webhook/leads-scraping"
             />
             <p className="mt-1 text-xs text-muted-foreground">
               O webhook no seu n8n que recebe os parâmetros de busca enviados pelo painel.
+            </p>
+          </label>
+
+          <label className="block text-sm font-medium text-malva-800">
+            <div className="flex items-center justify-between">
+              <span>URL do Webhook de Atualização (Google Sheets) n8n</span>
+            </div>
+            <Input
+              className="mt-2"
+              type="url"
+              autoComplete="off"
+              spellCheck={false}
+              value={config.n8nUpdateWebhookUrl || ''}
+              onChange={(event) => setConfig({ ...config, n8nUpdateWebhookUrl: event.target.value })}
+              placeholder="https://n8n.glamourlindoia.com.br/webhook/leads-update"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              O webhook que atualiza o status, anotações e data de contato diretamente na sua planilha.
             </p>
           </label>
 

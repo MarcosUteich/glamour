@@ -1,6 +1,7 @@
 export interface LeadScrapingConfig {
   apifyToken: string
   n8nWebhookUrl: string
+  n8nUpdateWebhookUrl: string
   sheetId: string
   sheetName: string
 }
@@ -48,6 +49,7 @@ const STORAGE_KEY_OVERRIDES = 'glamour_leads_overrides_v1'
 export const DEFAULT_CONFIG: LeadScrapingConfig = {
   apifyToken: '',
   n8nWebhookUrl: 'https://n8n.glamourlindoia.com.br/webhook/leads-scraping',
+  n8nUpdateWebhookUrl: 'https://n8n.glamourlindoia.com.br/webhook/leads-update',
   sheetId: '1ARtBNXi9JHnK7fzSeectXe8K_aEyGA1iyXnqOzieJsw',
   sheetName: 'Página1',
 }
@@ -208,6 +210,8 @@ export async function fetchLeadsFromSheet(config?: LeadScrapingConfig): Promise<
     const avaliacao = row.avaliacao || row.rating || ''
     const avaliacoes = row.avaliacoes || row.reviews || ''
     const rawStatus = row.status || 'NOVO'
+    const sheetNotes = row.anotacoes || row.notes || ''
+    const sheetLastContact = row.ultimocontato || row.lastcontact || ''
     const origem = row.origem || 'Google Maps / Apify'
     const leadKey = row.leadkey || (placeId ? `place:${placeId}` : `lead:${index + 1}`)
 
@@ -232,10 +236,54 @@ export async function fetchLeadsFromSheet(config?: LeadScrapingConfig): Promise<
       status: override.status || normalizeStatus(rawStatus),
       origem,
       leadKey,
-      notes: override.notes || '',
-      lastContact: override.lastContact || (dataCriacao ? dataCriacao.split(' ')[0] : 'Hoje'),
+      notes: override.notes !== undefined ? override.notes : sheetNotes,
+      lastContact: override.lastContact !== undefined ? override.lastContact : (sheetLastContact || (dataCriacao ? dataCriacao.split(' ')[0] : 'Hoje')),
     }
   })
+}
+
+export async function triggerN8nUpdateLead(
+  lead: SheetLead,
+  patch: { status?: LeadStatus; notes?: string; lastContact?: string },
+  config?: LeadScrapingConfig,
+) {
+  const cfg = config ?? getLeadsConfig()
+  const webhookUrl = cfg.n8nUpdateWebhookUrl || 'https://n8n.glamourlindoia.com.br/webhook/leads-update'
+
+  if (!webhookUrl) {
+    throw new Error('URL do Webhook de atualização do n8n não está configurada.')
+  }
+
+  const finalStatus = patch.status !== undefined ? patch.status : lead.status
+  const finalNotes = patch.notes !== undefined ? patch.notes : lead.notes
+  const finalLastContact = patch.lastContact !== undefined ? patch.lastContact : lead.lastContact
+
+  const payload = {
+    sheetId: cfg.sheetId,
+    sheetName: cfg.sheetName,
+    leadKey: lead.leadKey,
+    placeId: lead.placeId,
+    telefone: lead.telefone,
+    empresa: lead.empresa,
+    status: finalStatus.toUpperCase(),
+    notes: finalNotes,
+    lastContact: finalLastContact,
+  }
+
+  const response = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '')
+    throw new Error(`Falha ao sincronizar com Google Sheets via n8n (${response.status}): ${errorText || response.statusText}`)
+  }
+
+  return await response.json().catch(() => ({ success: true }))
 }
 
 export async function triggerN8nScraping(payload: ScrapingPayload, config?: LeadScrapingConfig) {
