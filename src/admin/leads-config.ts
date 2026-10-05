@@ -44,7 +44,6 @@ export interface SheetLead {
 }
 
 const STORAGE_KEY_CONFIG = 'glamour_leads_config_v1'
-const STORAGE_KEY_OVERRIDES = 'glamour_leads_overrides_v1'
 
 export const DEFAULT_CONFIG: LeadScrapingConfig = {
   apifyToken: '',
@@ -71,31 +70,6 @@ export function saveLeadsConfig(config: Partial<LeadScrapingConfig>): LeadScrapi
   const updated = { ...current, ...config }
   localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(updated))
   return updated
-}
-
-export function getLeadOverrides(): Record<string, { status?: LeadStatus; notes?: string; lastContact?: string }> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_OVERRIDES)
-    if (raw) return JSON.parse(raw)
-  } catch (err) {
-    console.error('Erro ao ler overrides de leads:', err)
-  }
-  return {}
-}
-
-export function saveLeadOverride(
-  leadKey: string,
-  patch: { status?: LeadStatus; notes?: string; lastContact?: string },
-) {
-  const current = getLeadOverrides()
-  const updated = {
-    ...current,
-    [leadKey]: {
-      ...(current[leadKey] || {}),
-      ...patch,
-    },
-  }
-  localStorage.setItem(STORAGE_KEY_OVERRIDES, JSON.stringify(updated))
 }
 
 function parseCSVLine(line: string): string[] {
@@ -153,19 +127,19 @@ function parseCSV(text: string): Record<string, string>[] {
   return rows
 }
 
-function normalizeStatus(rawStatus: string): LeadStatus {
+export function normalizeStatus(rawStatus: string): LeadStatus {
   const s = (rawStatus || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim()
 
-  if (s.includes('segundo') || s.includes('2 contato') || s.includes('follow') || s === 'segundo_contato') return 'segundo_contato'
-  if (s.includes('sem resposta') || s === 'sem_resposta') return 'sem_resposta'
+  if (s.includes('segundo') || s.includes('2') || s.includes('follow') || s === 'segundo_contato') return 'segundo_contato'
+  if (s.includes('enviado') || s.includes('sem resposta') || s.includes('1') || s === 'sem_resposta') return 'sem_resposta'
   if (s.includes('respondido')) return 'respondido'
   if (s.includes('interessado')) return 'interessado'
   if (s.includes('cliente')) return 'cliente'
-  if (s.includes('sem interesse') || s === 'sem_interesse' || s === 'recusado') return 'sem_interesse'
+  if (s.includes('sem interesse') || s.includes('recusado') || s === 'sem_interesse') return 'sem_interesse'
   return 'novo'
 }
 
@@ -192,7 +166,6 @@ export async function fetchLeadsFromSheet(config?: LeadScrapingConfig): Promise<
   }
 
   const rawRows = parseCSV(csvText)
-  const overrides = getLeadOverrides()
 
   return rawRows.map((row, index) => {
     const dataCriacao = row.data || row.datacriacao || ''
@@ -215,8 +188,6 @@ export async function fetchLeadsFromSheet(config?: LeadScrapingConfig): Promise<
     const origem = row.origem || 'Google Maps / Apify'
     const leadKey = row.leadkey || (placeId ? `place:${placeId}` : `lead:${index + 1}`)
 
-    const override = overrides[leadKey] || {}
-
     return {
       id: index + 1,
       dataCriacao,
@@ -233,11 +204,11 @@ export async function fetchLeadsFromSheet(config?: LeadScrapingConfig): Promise<
       placeId,
       avaliacao,
       avaliacoes,
-      status: override.status || normalizeStatus(rawStatus),
+      status: normalizeStatus(rawStatus),
       origem,
       leadKey,
-      notes: override.notes !== undefined ? override.notes : sheetNotes,
-      lastContact: override.lastContact !== undefined ? override.lastContact : (sheetLastContact || (dataCriacao ? dataCriacao.split(' ')[0] : 'Hoje')),
+      notes: sheetNotes,
+      lastContact: sheetLastContact || (dataCriacao ? dataCriacao.split(' ')[0] : 'Hoje'),
     }
   })
 }

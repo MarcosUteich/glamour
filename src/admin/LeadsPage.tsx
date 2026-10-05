@@ -25,7 +25,6 @@ import { DEFAULT_TEMPLATES, type Template } from './leads/types'
 import {
   fetchLeadsFromSheet,
   getLeadsConfig,
-  saveLeadOverride,
   triggerN8nUpdateLead,
   type SheetLead,
 } from './leads-config'
@@ -97,11 +96,6 @@ export function LeadsPage() {
       items.map((lead) => {
         if (lead.id === id) {
           const updated = { ...lead, ...patch }
-          saveLeadOverride(lead.leadKey, {
-            status: updated.status,
-            notes: updated.notes,
-            lastContact: updated.lastContact,
-          })
           pendingRef.current.set(updated.leadKey, updated)
           return updated
         }
