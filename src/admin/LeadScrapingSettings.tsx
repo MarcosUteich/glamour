@@ -1,5 +1,5 @@
 import { Check, KeyRound, Sheet, ExternalLink } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
@@ -9,10 +9,6 @@ import { getLeadsConfig, saveLeadsConfig, type LeadScrapingConfig } from './lead
 export function LeadScrapingSettings() {
   const [config, setConfig] = useState<LeadScrapingConfig>(getLeadsConfig())
   const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    setConfig(getLeadsConfig())
-  }, [])
 
   const handleSave = () => {
     saveLeadsConfig(config)
@@ -27,37 +23,22 @@ export function LeadScrapingSettings() {
         <div className="flex items-center justify-between">
           <h3 className="flex items-center gap-2 font-semibold text-malva-800">
             <KeyRound className="size-4" />
-            Token de acesso Apify & Webhook n8n
+            Integração de leads com n8n
           </h3>
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          Configure as credenciais e conexões para disparar o scraping pelo n8n e salvar automaticamente na sua planilha do Google Sheets.
+          Configure as conexões para disparar o scraping pelo n8n e salvar automaticamente na sua planilha do Google Sheets.
         </p>
 
         <div className="mt-6 space-y-5">
           <label className="block text-sm font-medium text-malva-800">
-            <div className="flex items-center justify-between">
-              <span>Token da Apify</span>
-              <a
-                href="https://console.apify.com/account/integrations"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-malva-600 hover:underline"
-              >
-                Obter token na Apify <ExternalLink className="size-3" />
-              </a>
-            </div>
-            <Input
-              className="mt-2"
-              type="password"
-              autoComplete="off"
-              spellCheck={false}
+            <span>Token da Apify</span>
+            <Input className="mt-2" type="password" autoComplete="off" spellCheck={false}
               value={config.apifyToken}
               onChange={(event) => setConfig({ ...config, apifyToken: event.target.value })}
-              placeholder="apify_api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-            />
+              placeholder="apify_api_..." />
             <p className="mt-1 text-xs text-muted-foreground">
-              Usado para fazer requisições dinâmicas no scraper do Google Maps da Apify.
+              Salvo neste navegador e enviado ao n8n somente ao iniciar uma busca. Para trocar, substitua o valor e salve.
             </p>
           </label>
 
@@ -97,6 +78,13 @@ export function LeadScrapingSettings() {
             </p>
           </label>
 
+          <label className="block text-sm font-medium text-malva-800">
+            <span>URL do Webhook de Leitura n8n</span>
+            <Input className="mt-2" type="url" value={config.n8nReadWebhookUrl}
+              onChange={(event) => setConfig({ ...config, n8nReadWebhookUrl: event.target.value })}
+              placeholder="https://n8n.glamourlindoia.com.br/webhook/leads-read" />
+          </label>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium text-malva-800">
               <div className="flex items-center justify-between">
@@ -134,7 +122,7 @@ export function LeadScrapingSettings() {
 
         <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
           <p className="text-xs text-muted-foreground">
-            As configurações são salvas de forma segura no navegador do administrador.
+            As configurações são salvas neste navegador. A autenticação usa sua sessão de administrador.
           </p>
           <Button onClick={handleSave} className="gap-2">
             {saved ? <Check className="size-4 text-emerald-300" /> : <Check className="size-4" />}
@@ -146,10 +134,10 @@ export function LeadScrapingSettings() {
       <AdminCard className="max-w-2xl bg-malva-50/50">
         <h4 className="flex items-center gap-2 text-sm font-semibold text-malva-800">
           <Sheet className="size-4 text-emerald-600" />
-          Como conectar o Google Sheets para leitura direta
+          Google Sheets privado
         </h4>
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          Para que o painel consiga ler os leads da sua planilha sem precisar de servidor intermediário, certifique-se de que a planilha no Google Sheets esteja compartilhada com <strong>"Qualquer pessoa com o link pode visualizar"</strong>.
+          O painel lê os leads pelo n8n usando sua sessão de administrador. A planilha pode permanecer restrita à conta Google conectada ao n8n. O token Apify cadastrado acima é enviado somente ao iniciar o scraping.
         </p>
       </AdminCard>
     </div>

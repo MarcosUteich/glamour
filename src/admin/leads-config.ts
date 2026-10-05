@@ -1,6 +1,9 @@
+import { requireSupabase } from '@/lib/supabase'
+
 export interface LeadScrapingConfig {
   apifyToken: string
   n8nWebhookUrl: string
+  n8nReadWebhookUrl: string
   n8nUpdateWebhookUrl: string
   sheetId: string
   sheetName: string
@@ -15,7 +18,6 @@ export interface ScrapingPayload {
   cep?: string
   limiteBusca: number
   limiteSalvar: number
-  apifyToken?: string
 }
 
 export type LeadStatus = 'novo' | 'sem_resposta' | 'segundo_contato' | 'respondido' | 'interessado' | 'cliente' | 'sem_interesse'
@@ -48,6 +50,7 @@ const STORAGE_KEY_CONFIG = 'glamour_leads_config_v1'
 export const DEFAULT_CONFIG: LeadScrapingConfig = {
   apifyToken: '',
   n8nWebhookUrl: 'https://n8n.glamourlindoia.com.br/webhook/leads-scraping',
+  n8nReadWebhookUrl: 'https://n8n.glamourlindoia.com.br/webhook/leads-read',
   n8nUpdateWebhookUrl: 'https://n8n.glamourlindoia.com.br/webhook/leads-update',
   sheetId: '1ARtBNXi9JHnK7fzSeectXe8K_aEyGA1iyXnqOzieJsw',
   sheetName: 'Página1',
@@ -57,7 +60,9 @@ export function getLeadsConfig(): LeadScrapingConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_CONFIG)
     if (raw) {
-      return { ...DEFAULT_CONFIG, ...JSON.parse(raw) }
+      const config = cleanConfig(JSON.parse(raw))
+      localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(config))
+      return config
     }
   } catch (err) {
     console.error('Erro ao ler configuração de leads:', err)
@@ -67,64 +72,40 @@ export function getLeadsConfig(): LeadScrapingConfig {
 
 export function saveLeadsConfig(config: Partial<LeadScrapingConfig>): LeadScrapingConfig {
   const current = getLeadsConfig()
-  const updated = { ...current, ...config }
+  const updated = cleanConfig({ ...current, ...config })
   localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(updated))
   return updated
 }
 
-function parseCSVLine(line: string): string[] {
-  const result: string[] = []
-  let insideQuotes = false
-  let currentField = ''
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i]
-    if (char === '"') {
-      if (insideQuotes && line[i + 1] === '"') {
-        currentField += '"'
-        i++
-      } else {
-        insideQuotes = !insideQuotes
-      }
-    } else if (char === ',' && !insideQuotes) {
-      result.push(currentField.trim())
-      currentField = ''
-    } else {
-      currentField += char
-    }
-  }
-  result.push(currentField.trim())
-  return result.map((f) => f.replace(/^"|"$/g, '').trim())
+function cleanConfig(stored: Record<string, unknown>): LeadScrapingConfig {
+  return Object.fromEntries(Object.entries(DEFAULT_CONFIG).map(([key, fallback]) => [
+    key, typeof stored?.[key] === 'string' && stored[key].trim() ? stored[key] : fallback,
+  ])) as unknown as LeadScrapingConfig
 }
 
-function parseCSV(text: string): Record<string, string>[] {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0)
-
-  if (lines.length < 2) return []
-
-  const headers = parseCSVLine(lines[0]).map((h) =>
-    h
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, ''),
-  )
-
-  const rows: Record<string, string>[] = []
-
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i])
-    const row: Record<string, string> = {}
-    headers.forEach((header, idx) => {
-      row[header] = values[idx] ?? ''
-    })
-    rows.push(row)
+async function requestLeadsWebhook(url: string, init: RequestInit): Promise<unknown> {
+  const target = new URL(url)
+  if (target.origin !== 'https://n8n.glamourlindoia.com.br'
+    || !target.pathname.startsWith('/webhook/') || target.username || target.password) {
+    throw new Error('Configure um webhook de produção em https://n8n.glamourlindoia.com.br.')
   }
-
-  return rows
+  const { data, error } = await requireSupabase().auth.getSession()
+  if (error || !data.session?.access_token) throw new Error('Faça login novamente para acessar os leads.')
+  const headers = new Headers(init.headers)
+  headers.set('Authorization', `Bearer ${data.session.access_token}`)
+  const response = await fetch(target.toString(), {
+    ...init, headers, credentials: 'omit', redirect: 'error', cache: 'no-store',
+  })
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('Sessão inválida ou expirada. Faça login novamente.')
+    if (response.status === 403) throw new Error('Acesso aos leads permitido somente para administradores no domínio da loja.')
+    throw new Error(`Falha na integração de leads com n8n (${response.status}).`)
+  }
+  const result: unknown = await response.json()
+  if (result && typeof result === 'object' && 'success' in result && result.success === false) {
+    throw new Error('O n8n não confirmou a operação.')
+  }
+  return result
 }
 
 export function normalizeStatus(rawStatus: string): LeadStatus {
@@ -145,27 +126,18 @@ export function normalizeStatus(rawStatus: string): LeadStatus {
 
 export async function fetchLeadsFromSheet(config?: LeadScrapingConfig): Promise<SheetLead[]> {
   const cfg = config ?? getLeadsConfig()
-  if (!cfg.sheetId) {
-    throw new Error('ID da planilha do Google Sheets não configurado.')
+  const result = await requestLeadsWebhook(cfg.n8nReadWebhookUrl, { method: 'GET' })
+  const rows = Array.isArray(result) ? result
+    : result && typeof result === 'object' && 'rows' in result ? result.rows : null
+  if (!Array.isArray(rows) || rows.some(row => !row || typeof row !== 'object' || Array.isArray(row))) {
+    throw new Error('Resposta inválida do webhook de leitura de leads.')
   }
-
-  const sheetNameEncoded = encodeURIComponent(cfg.sheetName || 'Página1')
-
-  const gvizUrl = `https://docs.google.com/spreadsheets/d/${cfg.sheetId}/gviz/tq?tqx=out:csv&sheet=${sheetNameEncoded}`
-  const exportUrl = `https://docs.google.com/spreadsheets/d/${cfg.sheetId}/export?format=csv&gid=0`
-
-  let csvText = ''
-  try {
-    const res = await fetch(gvizUrl)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    csvText = await res.text()
-  } catch {
-    const res2 = await fetch(exportUrl)
-    if (!res2.ok) throw new Error('Não foi possível carregar a planilha pública do Google Sheets.')
-    csvText = await res2.text()
-  }
-
-  const rawRows = parseCSV(csvText)
+  const rawRows: Record<string, string>[] = rows
+    .filter(row => Object.keys(row).length > 0)
+    .map(row => Object.fromEntries(Object.entries(row).map(([key, value]) => [
+      key.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''),
+      String(value ?? ''),
+    ])))
 
   return rawRows.map((row, index) => {
     const dataCriacao = row.data || row.datacriacao || ''
@@ -241,50 +213,27 @@ export async function triggerN8nUpdateLead(
     lastContact: finalLastContact,
   }
 
-  const response = await fetch(webhookUrl, {
+  return requestLeadsWebhook(webhookUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '')
-    throw new Error(`Falha ao sincronizar com Google Sheets via n8n (${response.status}): ${errorText || response.statusText}`)
-  }
-
-  return await response.json().catch(() => ({ success: true }))
 }
 
 export async function triggerN8nScraping(payload: ScrapingPayload, config?: LeadScrapingConfig) {
   const cfg = config ?? getLeadsConfig()
   if (!cfg.n8nWebhookUrl) {
-    throw new Error('URL do Webhook do n8n não está configurada. Acesse "Token da Apify e Webhook" para configurar.')
+    throw new Error('URL do Webhook do n8n não está configurada. Acesse as configurações da integração para configurar.')
   }
 
-  const tokenToUse = payload.apifyToken || cfg.apifyToken
-  if (!tokenToUse) {
-    throw new Error('Token da Apify não informado. Digite o token no formulário ou configure-o nas configurações.')
+  const apifyToken = cfg.apifyToken.trim()
+  if (!apifyToken) {
+    throw new Error('Cadastre o token da Apify nas configurações de leads antes de iniciar a busca.')
   }
 
-  const response = await fetch(cfg.n8nWebhookUrl, {
+  return requestLeadsWebhook(cfg.n8nWebhookUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      ...payload,
-      apifyToken: tokenToUse,
-      sheetId: cfg.sheetId,
-      sheetName: cfg.sheetName,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...payload, apifyToken, sheetId: cfg.sheetId, sheetName: cfg.sheetName }),
   })
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '')
-    throw new Error(`Falha ao disparar n8n (${response.status}): ${errorText || response.statusText}`)
-  }
-
-  return await response.json().catch(() => ({ success: true }))
 }

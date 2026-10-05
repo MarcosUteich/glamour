@@ -4,7 +4,6 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
-  getLeadsConfig,
   triggerN8nScraping,
   type ScrapingPayload,
 } from '../leads-config'
@@ -15,7 +14,6 @@ interface ScrapingModalProps {
 }
 
 export function ScrapingModal({ onClose, onSuccess }: ScrapingModalProps) {
-  const config = getLeadsConfig()
   const [nicho, setNicho] = useState('joalheria')
   const [tipoLocalizacao, setTipoLocalizacao] = useState<'CIDADE' | 'BAIRRO' | 'CEP'>('CIDADE')
   const [cidade, setCidade] = useState('Porto Alegre')
@@ -24,7 +22,6 @@ export function ScrapingModal({ onClose, onSuccess }: ScrapingModalProps) {
   const [cep, setCep] = useState('')
   const [limiteBusca, setLimiteBusca] = useState(80)
   const [limiteSalvar, setLimiteSalvar] = useState(80)
-  const [apifyToken, setApifyToken] = useState(config.apifyToken || '')
   const [loading, setLoading] = useState(false)
 
   const handleStartScraping = async (e: React.FormEvent) => {
@@ -56,7 +53,6 @@ export function ScrapingModal({ onClose, onSuccess }: ScrapingModalProps) {
       cep: cep.trim(),
       limiteBusca: Number(limiteBusca) || 80,
       limiteSalvar: Number(limiteSalvar) || 80,
-      apifyToken: apifyToken.trim(),
     }
 
     try {
@@ -205,19 +201,6 @@ export function ScrapingModal({ onClose, onSuccess }: ScrapingModalProps) {
                 onChange={(e) => setLimiteSalvar(Number(e.target.value))}
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">
-              Token Apify (opcional se já salvo nas configurações)
-            </label>
-            <Input
-              className="mt-1.5"
-              type="password"
-              value={apifyToken}
-              onChange={(e) => setApifyToken(e.target.value)}
-              placeholder="apify_api_..."
-            />
           </div>
 
           <div className="mt-6 flex items-center justify-end gap-3 border-t border-border pt-4">

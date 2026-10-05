@@ -34,7 +34,7 @@ export function LeadsPage() {
   const [templates, setTemplates] = useState<Template[]>(DEFAULT_TEMPLATES)
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [loadingSheet, setLoadingSheet] = useState(false)
+  const [loadingSheet, setLoadingSheet] = useState(true)
   const [showScrapeModal, setShowScrapeModal] = useState(false)
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban')
 
@@ -54,7 +54,7 @@ export function LeadsPage() {
     } catch (err) {
       console.warn('Erro ao carregar do Sheets:', err)
       if (!silent) {
-        toast.error('Não foi possível ler a planilha do Google Sheets. Verifique o ID nas configurações ou torne a planilha pública.')
+        toast.error('Não foi possível carregar os leads pelo n8n. Verifique sua sessão e a integração.')
       }
     } finally {
       setLoadingSheet(false)
@@ -62,7 +62,14 @@ export function LeadsPage() {
   }
 
   useEffect(() => {
-    loadLeads(true)
+    let active = true
+    void fetchLeadsFromSheet()
+      .then(data => { if (active) setLeads(data) })
+      .catch(err => {
+        if (active) toast.error(err instanceof Error ? err.message : 'Não foi possível carregar os leads pelo n8n.')
+      })
+      .finally(() => { if (active) setLoadingSheet(false) })
+    return () => { active = false }
   }, [])
 
   const term = normalizeText(search)
@@ -153,7 +160,7 @@ export function LeadsPage() {
             className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border px-3.5 py-2 text-sm font-medium text-malva-800 hover:bg-malva-50 transition-colors"
           >
             <Settings2 className="size-4" />
-            Token & n8n
+            Integração n8n
           </NavLink>
           <NavLink
             to="/admin/leads/templates"
@@ -183,7 +190,7 @@ export function LeadsPage() {
       ) : (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-white p-3 shadow-xs">
-            <div className="relative flex-1 min-w-[240px] max-w-md">
+            <div className="relative flex-1 min-w-60 max-w-md">
               <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
               <Input
                 aria-label="Buscar leads"
@@ -211,11 +218,10 @@ export function LeadsPage() {
                 <button
                   type="button"
                   onClick={() => setViewMode('kanban')}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                    viewMode === 'kanban'
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${viewMode === 'kanban'
                       ? 'bg-white text-malva-900 shadow-xs'
                       : 'text-muted-foreground hover:text-malva-800'
-                  }`}
+                    }`}
                 >
                   <LayoutGrid className="size-3.5" />
                   Quadro Kanban
@@ -223,11 +229,10 @@ export function LeadsPage() {
                 <button
                   type="button"
                   onClick={() => setViewMode('list')}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                    viewMode === 'list'
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${viewMode === 'list'
                       ? 'bg-white text-malva-900 shadow-xs'
                       : 'text-muted-foreground hover:text-malva-800'
-                  }`}
+                    }`}
                 >
                   <List className="size-3.5" />
                   Lista / Tabela
