@@ -12,6 +12,7 @@ import { formatBRL } from '@/lib/money'
 import { formatBRPhone } from '@/lib/phone'
 import { loadLastOrder, markLastOrderTracked } from '@/lib/storage'
 import { whatsappLink } from '@/lib/whatsapp'
+import { titles } from '@/seo/titles'
 
 export function OrderConfirmedPage() {
   const { orderNumber } = useParams()
@@ -30,7 +31,7 @@ export function OrderConfirmedPage() {
   if (!matches) {
     return (
       <div className="mx-auto max-w-md px-6 py-20 text-center">
-        <title>Pedido · Glamour Atacado</title>
+        <title>{titles.page('Pedido')}</title>
         <p className="text-lg font-semibold text-malva-800">Pedido {orderNumber}</p>
         <p className="mt-2 text-sm text-muted-foreground">
           Não encontramos os detalhes deste pedido neste aparelho. Se você já enviou a mensagem, é só aguardar nosso
@@ -56,7 +57,7 @@ export function OrderConfirmedPage() {
 
   return (
     <div className="mx-auto max-w-md px-5 pb-20 pt-10 text-center">
-      <title>{`Pedido ${order.orderNumber} · Glamour Atacado`}</title>
+      <title>{titles.page(`Pedido ${order.orderNumber}`)}</title>
 
       <div className="mx-auto grid size-16 place-items-center rounded-full bg-ok-fundo">
         <Check className="size-8 text-ok" strokeWidth={2.5} />

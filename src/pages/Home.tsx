@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { useCatalog, useSettings } from '@/hooks/useCatalog'
 import { filterProducts, visibleCategories } from '@/lib/catalog'
+import { titles } from '@/seo/titles'
 
 export function Home() {
   const { slug } = useParams()
@@ -39,11 +40,7 @@ export function Home() {
   return (
     <>
       <title>
-        {slug === 'novidades'
-          ? 'Novidades no atacado | Glamour Atacado · Porto Alegre'
-          : category
-            ? `${category.name} no atacado | Glamour Atacado · Porto Alegre`
-            : 'Semijoias no atacado em Porto Alegre | Glamour Atacado'}
+        {slug === 'novidades' ? titles.novidades() : category ? titles.category(category.name) : titles.home()}
       </title>
       {query && <meta name="robots" content="noindex, follow" />}
       {showHero && (
@@ -94,7 +91,14 @@ export function Home() {
             </Link>
           </div>
         ) : (
-          <ProductGrid key={`${slug ?? ''}|${query}`} products={products} categories={data?.categories ?? []} />
+          <ProductGrid
+            key={`${slug ?? ''}|${query}`}
+            products={products}
+            categories={data?.categories ?? []}
+            heading={showHero ? 'h3' : 'h2'}
+            // Nas categorias a primeira fileira aparece logo na tela do celular; na home ela fica abaixo do banner
+            eagerCount={showHero ? 0 : 2}
+          />
         )}
       </section>
     </>

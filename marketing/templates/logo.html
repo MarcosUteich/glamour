@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../shared.css" />
+    <style>
+      /* Logo para o Google (dados estruturados da loja): letreiro malva sobre branco, quadrado. */
+      body { width: 100vw; height: 100vh; background: #fff; }
+      .logo { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .wordmark { width: 76%; }
+      .wordmark path { fill: var(--malva); }
+      .wordmark path:nth-last-child(-n + 4) { fill: var(--dourado); } /* os quatro pontos, como no rodapé do site */
+      .sub { font-family: 'Montserrat', sans-serif; font-weight: 500; letter-spacing: 0.5em; text-transform: uppercase;
+             font-size: 6.2vmin; color: var(--malva-escuro); margin-top: 3vmin; padding-left: 0.5em; }
+    </style>
+  </head>
+  <body>
+    <div class="logo">
+      {{WORDMARK}}
+      <p class="sub">atacado</p>
+    </div>
+  </body>
+</html>

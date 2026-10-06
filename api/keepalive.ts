@@ -1,20 +1,10 @@
 // Cron diário (vercel.json): faz um SELECT leve para o projeto Supabase Free
-// não pausar por 7 dias sem uso.
+// não pausar por 7 dias sem uso. No servidor Node, o mesmo ping roda sozinho (server/index.ts).
+import { pingSupabase, readSeoEnv } from '../src/seo/handler'
+
 export const config = { runtime: 'edge' }
 
 export default async function handler() {
-  const url = process.env.VITE_SUPABASE_URL
-  const key = process.env.VITE_SUPABASE_ANON_KEY
-  if (!url || !key) {
-    return new Response('sem configuração do supabase', { status: 200 })
-  }
-
-  try {
-    const res = await fetch(`${url}/rest/v1/settings?select=id&limit=1`, {
-      headers: { apikey: key, authorization: `Bearer ${key}` },
-    })
-    return new Response(`supabase ${res.status}`, { status: 200 })
-  } catch {
-    return new Response('falha ao contatar o supabase', { status: 200 })
-  }
+  const message = await pingSupabase({ env: readSeoEnv(process.env), fetch: (input, init) => fetch(input, init) })
+  return new Response(message, { status: 200 })
 }

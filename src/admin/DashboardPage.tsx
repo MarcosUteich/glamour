@@ -58,6 +58,25 @@ export function DashboardPage() {
             </AdminCard>
           )}
 
+          {data.by_source && data.by_source.length > 0 && (
+            <AdminCard className="mb-4">
+              <p className="mb-2 text-sm font-semibold text-malva-800">Pedidos por origem</p>
+              <ul className="space-y-1.5 text-sm">
+                {data.by_source.map((row) => (
+                  <li key={row.source} className="flex justify-between gap-3">
+                    <span className="min-w-0 truncate text-muted-foreground">{row.source}</span>
+                    <span className="shrink-0 font-semibold tabular-nums">
+                      {row.n} · {formatBRL(row.total_cents)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-[12px] text-muted-foreground">
+                Último canal antes do pedido. Use links com UTM na bio, nos anúncios e no cartaz para separar cada um.
+              </p>
+            </AdminCard>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <TopList title="Mais adicionados ao pedido" rows={data.top_added} unit="vezes" />
             <TopList title="Mais vendidos" rows={data.top_sold} unit="un." />

@@ -1,0 +1,9 @@
+node_modules
+dist
+dist-server
+.git
+.vercel
+coverage
+marketing/out
+brand-src
+*.local

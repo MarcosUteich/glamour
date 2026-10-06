@@ -32,7 +32,14 @@ export const useCart = create<CartState>()(
         return changes
       },
     }),
-    { name: 'glamour:pedido', version: 1, partialize: (s) => ({ lines: s.lines }) },
+    {
+      name: 'glamour:pedido',
+      version: 1,
+      partialize: (s) => ({ lines: s.lines }),
+      // O pedido salvo no aparelho entra por fora (main.tsx e StoreLayout): numa página montada no servidor, só
+      // depois da hidratação, para o HTML do servidor (sempre sem carrinho) bater com a primeira renderização
+      skipHydration: true,
+    },
   ),
 )
 
@@ -43,4 +50,9 @@ export function useCartLine(productId: string | undefined) {
 export function useCartTotals() {
   const lines = useCart((s) => s.lines)
   return useMemo(() => ({ lines, ...cartTotals(lines) }), [lines])
+}
+
+/** Lê o pedido salvo no aparelho, se ainda não leu (localStorage responde na hora). */
+export function loadSavedCart() {
+  if (!useCart.persist.hasHydrated()) void useCart.persist.rehydrate()
 }

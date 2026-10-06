@@ -12,7 +12,19 @@ import { maxQuantityFor } from '@/store/cart-logic'
 import { ProductImage } from './ProductImage'
 import { QtyStepper } from './QtyStepper'
 
-export function ProductCard({ product, fallback }: { product: Product; fallback: string }) {
+export function ProductCard({
+  product,
+  fallback,
+  heading: Heading = 'h3',
+  eager = false,
+}: {
+  product: Product
+  fallback: string
+  /** Nível do nome da peça na página: h2 sob o título da categoria, h3 sob uma seção, p fora de contexto */
+  heading?: 'h2' | 'h3' | 'p'
+  /** Foto na primeira tela: carrega já, com prioridade (LCP) */
+  eager?: boolean
+}) {
   const line = useCartLine(product.id)
   const add = useCart((s) => s.add)
   const setQuantity = useCart((s) => s.setQuantity)
@@ -38,6 +50,7 @@ export function ProductCard({ product, fallback }: { product: Product; fallback:
           src={product.photos[0]?.sm}
           fallback={fallback}
           alt={product.name}
+          eager={eager}
           className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
         />
         {isNewProduct(product.created_at) && (
@@ -53,9 +66,9 @@ export function ProductCard({ product, fallback }: { product: Product; fallback:
       </Link>
 
       <div className="mt-2.5 flex flex-1 flex-col px-0.5">
-        <Link to={href} className="line-clamp-2 text-[14px] font-medium leading-snug text-tinta">
-          {product.name}
-        </Link>
+        <Heading className="line-clamp-2 text-[14px] font-medium leading-snug text-tinta">
+          <Link to={href}>{product.name}</Link>
+        </Heading>
         <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{productSubtitle(product)}</p>
         <p className="mt-1.5 text-base font-bold tabular-nums text-malva-800">{formatBRL(product.price_cents)}</p>
         {lowStock && <p className="text-[11.5px] font-medium text-malva-600">Últimas {product.stock} unidades</p>}

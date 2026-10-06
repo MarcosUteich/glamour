@@ -29,7 +29,7 @@ export function Suggestions({ remainingCents }: { remainingCents: number }) {
       <ul className="no-scrollbar -mx-4 mt-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
         {picks.map((p) => (
           <li key={p.id} className="w-[152px] shrink-0 snap-start">
-            <ProductCard product={p} fallback={categoryArt(slugById.get(p.category_id))} />
+            <ProductCard product={p} fallback={categoryArt(slugById.get(p.category_id))} heading="p" />
           </li>
         ))}
       </ul>

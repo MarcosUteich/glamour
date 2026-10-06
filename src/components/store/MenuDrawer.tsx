@@ -1,4 +1,4 @@
-import { AtSign, Clock, History, MapPin, Menu, ShoppingBag, X } from 'lucide-react'
+import { AtSign, CircleHelp, Clock, History, MapPin, Menu, ShoppingBag, X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { WhatsAppIcon } from '@/components/brand/WhatsAppIcon'
@@ -57,6 +57,9 @@ export function MenuDrawer() {
           </MenuLink>
           <MenuLink to="/meus-pedidos" onClick={close}>
             <History className="size-4 text-malva-500" /> Meus pedidos
+          </MenuLink>
+          <MenuLink to="/como-comprar" onClick={close}>
+            <CircleHelp className="size-4 text-malva-500" /> Como comprar
           </MenuLink>
 
           <div className="mt-6 space-y-3 px-3 text-sm text-malva-800">

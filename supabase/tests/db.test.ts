@@ -61,7 +61,16 @@ async function stockOf(id: string) {
 beforeAll(async () => {
   db = new PGlite()
   await db.exec(SUPABASE_STUB)
-  for (const file of ['0001_schema.sql', '0002_rls.sql', '0003_functions.sql', '0005_order_lookup.sql']) {
+  const migrations = [
+    '0001_schema.sql',
+    '0002_rls.sql',
+    '0003_functions.sql',
+    '0005_order_lookup.sql',
+    '0006_seo.sql',
+    '0007_origem_e_fotos.sql',
+    '0008_como_comprar.sql',
+  ]
+  for (const file of migrations) {
     await db.exec(sql(`migrations/${file}`))
   }
   await db.exec(sql('seed.sql'))
@@ -320,5 +329,103 @@ describe('eventos', () => {
     await expect(as('anon', null, () => db.query(`insert into public.events (type) values ('hack')`))).rejects.toThrow(
       /check constraint/,
     )
+  })
+})
+
+describe('origem do pedido (migration 0007)', () => {
+  const ORIGIN = {
+    first: { source: 'instagram', medium: 'bio', at: '2026-10-12T10:00:00Z' },
+    last: { source: 'google', medium: 'cpc', ids: { gclid: 'abc' }, at: '2026-10-13T10:00:00Z' },
+  }
+
+  async function createWithOrigin(phone: string, attribution: unknown) {
+    const { rows } = await as('anon', null, () =>
+      db.query<{ r: Record<string, unknown> }>('select public.create_order($1, $2, $3::jsonb, $4::jsonb) as r', [
+        'Ana Souza',
+        phone,
+        JSON.stringify([{ product_id: P_BRINCO, quantity: 20 }]),
+        JSON.stringify(attribution),
+      ]),
+    )
+    const order = rows[0].r
+    const saved = await db.query<{ attribution: unknown }>('select attribution from public.orders where order_number = $1', [
+      order.order_number,
+    ])
+    return saved.rows[0].attribution
+  }
+
+  it('guarda de onde a cliente chegou', async () => {
+    expect(await createWithOrigin('51977770001', ORIGIN)).toEqual(ORIGIN)
+  })
+
+  it('a chamada antiga, sem origem, continua funcionando', async () => {
+    const r = await as('anon', null, () => createOrder('51977770002', [{ product_id: P_BRINCO, quantity: 20 }]))
+    const { rows } = await db.query<{ attribution: unknown }>('select attribution from public.orders where order_number = $1', [
+      r.order_number,
+    ])
+    expect(rows[0].attribution).toBeNull()
+  })
+
+  it('origem inválida ou grande demais é descartada sem impedir o pedido', async () => {
+    expect(await createWithOrigin('51977770003', ['não', 'é', 'objeto'])).toBeNull()
+    expect(await createWithOrigin('51977770004', { first: { source: 'x'.repeat(5000) } })).toBeNull()
+  })
+
+  it('visitante não lê a origem gravada', async () => {
+    const rows = await as('anon', null, async () => (await db.query('select attribution from public.orders')).rows)
+    expect(rows).toHaveLength(0)
+  })
+
+  it('painel mostra pedidos por origem', async () => {
+    const { rows } = await as('authenticated', ADMIN, () =>
+      db.query<{ r: { by_source: Array<{ source: string; n: number }> } }>(
+        `select public.admin_dashboard(now() - interval '1 day', now() + interval '1 minute') as r`,
+      ),
+    )
+    const sources = rows[0].r.by_source.map((s) => s.source)
+    expect(sources).toContain('google')
+    expect(sources).toContain('sem registro')
+  })
+
+  it('foto ganha a coluna do JPEG para compartilhar', async () => {
+    const { rows } = await db.query<{ n: number }>(
+      `select count(*)::int as n from information_schema.columns where table_name = 'product_images' and column_name = 'path_share'`,
+    )
+    expect(rows[0].n).toBe(1)
+  })
+})
+
+describe('perguntas da página Como comprar (migration 0008)', () => {
+  const FAQ = [{ question: 'Aceitam Pix?', answer: 'Sim.' }]
+
+  it('começa vazia (o site usa as perguntas padrão) e o visitante lê', async () => {
+    const rows = await as('anon', null, async () => (await db.query('select faq from public.settings')).rows)
+    expect(rows[0]).toEqual({ faq: null })
+  })
+
+  it('visitante não altera as perguntas', async () => {
+    await as('anon', null, () => db.query('update public.settings set faq = $1::jsonb', [JSON.stringify(FAQ)]))
+    await as('authenticated', CUSTOMER_USER, () => db.query('update public.settings set faq = $1::jsonb', [JSON.stringify(FAQ)]))
+    expect((await db.query<{ faq: unknown }>('select faq from public.settings')).rows[0].faq).toBeNull()
+  })
+
+  it('admin salva a lista', async () => {
+    await as('authenticated', ADMIN, () => db.query('update public.settings set faq = $1::jsonb', [JSON.stringify(FAQ)]))
+    expect((await db.query<{ faq: unknown }>('select faq from public.settings')).rows[0].faq).toEqual(FAQ)
+  })
+
+  it('o banco recusa o que não é lista ou é grande demais', async () => {
+    const tooMany = Array.from({ length: 31 }, (_, i) => ({ question: `P${i}`, answer: 'R' }))
+    await expect(
+      as('authenticated', ADMIN, () => db.query(`update public.settings set faq = '{"question": "x"}'::jsonb`)),
+    ).rejects.toThrow()
+    await expect(
+      as('authenticated', ADMIN, () => db.query('update public.settings set faq = $1::jsonb', [JSON.stringify(tooMany)])),
+    ).rejects.toThrow()
+  })
+
+  it('pode rodar de novo sem erro', async () => {
+    await db.exec(sql('migrations/0008_como_comprar.sql'))
+    expect((await db.query<{ faq: unknown }>('select faq from public.settings')).rows[0].faq).toEqual(FAQ)
   })
 })

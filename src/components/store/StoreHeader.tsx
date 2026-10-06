@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { Wordmark } from '@/components/brand/Wordmark'
 import { useCartTotals } from '@/store/cart'
 import { MenuDrawer } from './MenuDrawer'
+import { SITE_NAME } from '@/seo/titles'
 
 export function StoreHeader() {
   const { pieces } = useCartTotals()
@@ -13,7 +14,7 @@ export function StoreHeader() {
         <MenuDrawer />
         <Link
           to="/"
-          aria-label="Glamour Atacado, página inicial"
+          aria-label={`${SITE_NAME}, página inicial`}
           className="flex flex-col items-center justify-self-center"
         >
           <Wordmark className="w-[128px]" dotsClassName="fill-dourado-claro" />
@@ -21,7 +22,7 @@ export function StoreHeader() {
         </Link>
         <Link
           to="/pedido"
-          aria-label={pieces > 0 ? `Seu pedido, ${pieces} peças` : 'Seu pedido'}
+          aria-label={pieces > 0 ? `Seu pedido, ${pieces} ${pieces === 1 ? 'peça' : 'peças'}` : 'Seu pedido'}
           className="relative grid size-12 place-items-center justify-self-end rounded-full transition-colors hover:bg-white/10"
         >
           <ShoppingBag className="size-6" strokeWidth={1.6} />

@@ -1,12 +1,14 @@
-import { useEffect, useRef } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { toast } from 'sonner'
 import { useCatalog } from '@/hooks/useCatalog'
-import { isDemo } from '@/lib/supabase'
+import { captureAttribution } from '@/lib/attribution'
+import { isDemo } from '@/lib/rest'
 import { initTracking, trackPageView } from '@/lib/tracking'
 import { cn } from '@/lib/utils'
-import { useCart } from '@/store/cart'
+import { loadSavedCart, useCart } from '@/store/cart'
 import { CartFab } from './CartFab'
+import { CookieBanner } from './CookieBanner'
 import { StoreFooter } from './StoreFooter'
 import { StoreHeader } from './StoreHeader'
 
@@ -20,7 +22,11 @@ export function StoreLayout() {
   const onOrderPages = pathname.startsWith('/pedido')
   const previousPath = useRef(pathname)
 
+  // Origem da visita (UTM, anúncio, Instagram...) antes de qualquer navegação interna apagar a URL de chegada.
+  // Numa página que veio montada do servidor, o pedido salvo no aparelho entra aqui, depois da hidratação.
   useEffect(() => {
+    loadSavedCart()
+    captureAttribution()
     initTracking()
   }, [])
 
@@ -52,10 +58,22 @@ export function StoreLayout() {
       )}
       <StoreHeader />
       <main className={cn('flex-1', hasItems && !onOrderPages && 'pb-32')}>
-        <Outlet />
+        {/* Página ainda baixando: cabeçalho e rodapé ficam, só o meio mostra o carregando */}
+        <Suspense fallback={<PageLoading />}>
+          <Outlet />
+        </Suspense>
       </main>
       <StoreFooter />
       {!onOrderPages && <CartFab />}
+      <CookieBanner />
+    </div>
+  )
+}
+
+function PageLoading() {
+  return (
+    <div className="grid min-h-dvh place-items-center">
+      <span className="size-8 animate-spin rounded-full border-2 border-malva-200 border-t-malva-500" />
     </div>
   )
 }

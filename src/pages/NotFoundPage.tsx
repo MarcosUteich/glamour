@@ -1,10 +1,11 @@
 import { Link } from 'react-router'
 import { buttonVariants } from '@/components/ui/button-variants'
+import { titles } from '@/seo/titles'
 
 export function NotFoundPage() {
   return (
     <div className="mx-auto max-w-md px-6 py-24 text-center">
-      <title>Página não encontrada · Glamour Atacado</title>
+      <title>{titles.page('Página não encontrada')}</title>
       <meta name="robots" content="noindex" />
       <p className="font-script text-5xl text-malva-400">ops</p>
       <h1 className="mt-4 text-xl font-semibold text-malva-800">Não encontramos essa página</h1>

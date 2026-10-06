@@ -1,3 +1,5 @@
+import type { FaqItem } from '@/seo/faq'
+
 export interface Category {
   id: string
   name: string
@@ -41,6 +43,8 @@ export interface Settings {
   pickup_text: string
   hours_text: string | null
   instagram_url: string | null
+  /** Perguntas da página Como comprar salvas no painel (migration 0008); null ou ausente = as padrão */
+  faq?: FaqItem[] | null
 }
 
 export interface CreatedOrderItem {

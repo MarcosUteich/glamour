@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { buttonVariants } from '@/components/ui/button-variants'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useCatalog } from '@/hooks/useCatalog'
+import { useCatalog, useSettings } from '@/hooks/useCatalog'
 import { track } from '@/lib/analytics'
 import { isNewProduct, isSoldOut } from '@/lib/catalog'
 import { formatBRL } from '@/lib/money'
@@ -19,10 +19,13 @@ import type { ProductPhoto } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useCart, useCartLine } from '@/store/cart'
 import { maxQuantityFor } from '@/store/cart-logic'
+import { productDescription } from '@/seo/head'
+import { titles } from '@/seo/titles'
 
 export function ProductPage() {
   const { slug } = useParams()
   const { data, isPending } = useCatalog()
+  const settings = useSettings()
   const product = data?.products.find((p) => p.slug === slug)
   const category = product ? data?.categories.find((c) => c.id === product.category_id) : undefined
   const line = useCartLine(product?.id)
@@ -38,7 +41,7 @@ export function ProductPage() {
   if (!product) {
     return (
       <div className="mx-auto max-w-md px-6 py-20 text-center">
-        <title>Peça não encontrada · Glamour Atacado</title>
+        <title>{titles.page('Peça não encontrada')}</title>
         <meta name="robots" content="noindex" />
         <p className="text-lg font-semibold text-malva-800">Essa peça não está mais no catálogo.</p>
         <Link to="/" className={buttonVariants({ className: 'mt-6' })}>
@@ -79,8 +82,8 @@ export function ProductPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-16 pt-4 sm:px-6">
-      <title>{`${product.name} ${product.code} · ${formatBRL(product.price_cents)} no atacado | Glamour`}</title>
-      <meta name="description" content={`${product.name} (${product.code}) no atacado por ${formatBRL(product.price_cents)}.`} />
+      <title>{titles.product(product)}</title>
+      <meta name="description" content={productDescription(product, settings.min_order_cents)} />
 
       <nav aria-label="Você está em" className="mb-4 flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
         <Link to="/" className="shrink-0 font-medium text-malva-700 hover:underline">
@@ -135,7 +138,16 @@ export function ProductPage() {
             </p>
           )}
 
-          <dl className="mt-8 divide-y divide-border rounded-2xl border border-border bg-white">
+          <p className="mt-5 rounded-2xl bg-malva-100/70 px-4 py-3 text-[13.5px] leading-relaxed text-malva-800">
+            Pedido mínimo de <strong>{formatBRL(settings.min_order_cents)}</strong> somando as peças, envio pelo WhatsApp
+            e retirada no Lindóia Shopping.{' '}
+            <Link to="/como-comprar" className="font-semibold underline underline-offset-4">
+              Como funciona
+            </Link>
+          </p>
+
+          <h2 className="mt-8 text-[11px] font-semibold uppercase tracking-[0.25em] text-malva-800">Detalhes da peça</h2>
+          <dl className="mt-2 divide-y divide-border rounded-2xl border border-border bg-white">
             {details
               .filter(([, value]) => value)
               .map(([label, value]) => (
@@ -208,8 +220,9 @@ function Gallery({ photos, fallback, alt }: { photos: ProductPhoto[]; fallback: 
 }
 
 function ProductSkeleton() {
+  // Altura mínima de uma tela: o rodapé não aparece e depois pula para baixo quando a peça carrega (CLS)
   return (
-    <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 md:grid-cols-2">
+    <div className="mx-auto grid min-h-dvh max-w-6xl content-start gap-8 px-4 py-8 sm:px-6 md:grid-cols-2">
       <Skeleton className="aspect-square w-full rounded-3xl" />
       <div className="space-y-4">
         <Skeleton className="h-8 w-3/4" />

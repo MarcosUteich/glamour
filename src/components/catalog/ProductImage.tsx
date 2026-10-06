@@ -16,7 +16,9 @@ export function ProductImage({ src, fallback, alt, className, eager = false }: P
       src={!src || failed ? fallback : src}
       alt={alt}
       loading={eager ? 'eager' : 'lazy'}
-      decoding="async"
+      // Foto principal da página de peça: prioridade alta (o servidor já pediu ao navegador para baixá-la cedo)
+      fetchPriority={eager ? 'high' : undefined}
+      decoding={eager ? 'auto' : 'async'}
       onError={() => setFailed(true)}
       className={className}
     />
