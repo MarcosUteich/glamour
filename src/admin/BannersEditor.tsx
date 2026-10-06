@@ -15,11 +15,10 @@ function validLink(value: string) {
 
 export function BannersEditor() {
   const qc = useQueryClient()
-  const { data, isError } = useQuery({ queryKey: ['settings'], queryFn: fetchSettings })
+  const { data, isError, isPending } = useQuery({ queryKey: ['settings'], queryFn: fetchSettings })
   const [draft, setDraft] = useState<Banner[] | null>(null)
   const [uploading, setUploading] = useState(false)
   const banners = draft ?? data?.banners ?? []
-  const available = data?.banners !== undefined
   const patch = (id: string, values: Partial<Banner>) => setDraft(banners.map((item) => item.id === id ? { ...item, ...values } : item))
   const mutation = useMutation({
     mutationFn: async () => {
@@ -56,8 +55,9 @@ export function BannersEditor() {
   const valid = banners.every((item) => item.title.trim() && item.image_url && item.mobile_image_url && validLink(item.link) && Number.isInteger(item.duration_seconds) && item.duration_seconds >= 2 && item.duration_seconds <= 120)
   return <AdminCard className="space-y-4">
     <p className="text-sm text-muted-foreground">Campanhas na home, na ordem abaixo. O tempo em segundos define quando passa para o próximo banner. Sem banners ativos, aparece a arte original.</p>
-    {!available && <p className="text-sm text-destructive">{isError ? 'Não foi possível carregar os banners.' : data ? 'Aplique a migration 0010_banners.sql no Supabase para habilitar o cadastro.' : 'Carregando…'}</p>}
-    <fieldset disabled={!available || uploading || mutation.isPending} className="space-y-4 disabled:opacity-60">
+    {isPending && <p className="text-sm text-muted-foreground" role="status">Carregando…</p>}
+    {isError && <p className="text-sm text-destructive" role="alert">Não foi possível carregar os banners.</p>}
+    <fieldset disabled={isPending || isError || uploading || mutation.isPending} className="space-y-4 disabled:opacity-60">
       {banners.map((banner, index) => <div key={banner.id} className="space-y-3 rounded-xl border border-border p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="mr-auto font-semibold">Banner {index + 1}</span>
