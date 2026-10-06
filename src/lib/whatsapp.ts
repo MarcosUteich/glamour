@@ -83,7 +83,17 @@ export function buildOrderWhatsApp(order: OrderSummary, storeNumber: string) {
 /** Mensagens prontas que o painel usa para responder o cliente em cada etapa. */
 export function buildCustomerMessage(
   status: OrderStatus,
-  order: { customerName: string; orderNumber: string; totalCents: number; pickupText: string; hoursText?: string | null },
+  order: {
+    customerName: string
+    orderNumber: string
+    totalCents: number
+    pickupText: string
+    hoursText?: string | null
+    /** Link do catálogo, para a mensagem de "Retirado" */
+    catalogUrl?: string | null
+    /** Link de avaliação no Google, para a mensagem de "Retirado" */
+    reviewUrl?: string | null
+  },
 ): string {
   const name = order.customerName.trim().split(/\s+/)[0]
   const number = `#${order.orderNumber}`
@@ -101,8 +111,12 @@ export function buildCustomerMessage(
       return `Olá, ${name}! Seu pedido ${number} está pronto para retirada: ${order.pickupText}.${
         order.hoursText ? ` Horário: ${order.hoursText}.` : ''
       }`
-    case 'retirado':
-      return `Agradecemos pela compra, ${name}! Quando quiser repor seu estoque, é só montar um novo pedido no nosso catálogo de atacado.`
+    case 'retirado': {
+      // Com o link de avaliação preenchido em src/seo/business.ts, já pede a avaliação no Google
+      const review = order.reviewUrl ? ` Se puder, conte como foi a sua experiência no Google: ${order.reviewUrl}` : ''
+      const catalog = order.catalogUrl ? `: ${order.catalogUrl}` : ''
+      return `Agradecemos pela compra, ${name}! Quando quiser repor seu estoque, é só montar um novo pedido no nosso catálogo de atacado${catalog}.${review}`
+    }
     case 'cancelado':
       return `Olá, ${name}. Seu pedido ${number} foi cancelado. Se quiser, podemos montar um novo pedido juntos.`
   }

@@ -1,8 +1,10 @@
 import { PRODUCT_COLUMNS, toProduct, type ProductRow } from '@/data/api'
+import type { Attribution } from '@/lib/attribution'
 import { processProductImage } from '@/lib/images'
 import { requireSupabase } from '@/lib/supabase'
 import type { Category, Product, Settings } from '@/lib/types'
 import type { OrderStatus } from '@/lib/orders'
+import { DEFAULT_FAQ, parseFaq, type FaqItem } from '@/seo/faq'
 
 export interface AdminOrderItem {
   id: string
@@ -26,6 +28,8 @@ export interface AdminOrder {
   status: OrderStatus
   admin_notes: string | null
   created_at: string
+  /** De onde a cliente chegou ao site (migration 0007; antes dela, ausente) */
+  attribution?: Attribution | null
 }
 
 export interface AdminOrderDetail extends AdminOrder {
@@ -43,6 +47,8 @@ export interface DashboardData {
   today_total_cents: number
   top_added: Array<{ name: string; code: string; n: number }>
   top_sold: Array<{ name: string; code: string; n: number }>
+  /** Pedidos por origem (migration 0007; antes dela, ausente) */
+  by_source?: Array<{ source: string; n: number; confirmed: number; total_cents: number }>
 }
 
 export async function fetchAllCategories(): Promise<Category[]> {
@@ -125,6 +131,8 @@ export interface StoredImage {
   id: string
   path_sm: string
   path_lg: string
+  /** JPEG quadrado para prévia de link e catálogo da Meta (migration 0007) */
+  path_share?: string | null
   sort_order: number
   sm: string
   lg: string
@@ -134,7 +142,8 @@ export async function fetchProductImages(productId: string): Promise<StoredImage
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('product_images')
-    .select('id, path_sm, path_lg, sort_order')
+    // select('*') funciona antes e depois da migration 0007 (coluna path_share)
+    .select('*')
     .eq('product_id', productId)
     .order('sort_order')
   if (error) throw error
@@ -158,22 +167,26 @@ export async function uploadProductImage(
   const processed = await processProductImage(file)
   const stamp = imageId ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const base = `${productId}/${slug ? `${slug}-` : ''}${stamp}`
-  const opts = { contentType: 'image/webp', cacheControl: '31536000', upsert: false }
+  const webp = { contentType: 'image/webp', cacheControl: '31536000', upsert: false }
+  const jpeg = { ...webp, contentType: 'image/jpeg' }
 
-  const [lg, sm] = await Promise.all([
-    supabase.storage.from('product-images').upload(`${base}-lg.webp`, processed.lg, opts),
-    supabase.storage.from('product-images').upload(`${base}-sm.webp`, processed.sm, opts),
+  const [lg, sm, share] = await Promise.all([
+    supabase.storage.from('product-images').upload(`${base}-lg.webp`, processed.lg, webp),
+    supabase.storage.from('product-images').upload(`${base}-sm.webp`, processed.sm, webp),
+    supabase.storage.from('product-images').upload(`${base}-share.jpg`, processed.share, jpeg),
   ])
+  const alreadyUploaded = (error: NonNullable<typeof lg.error>) => {
+    const code = (error as typeof error & { code?: string }).code
+    return error.statusCode === '409' || error.status === 409 ||
+      code === 'ResourceAlreadyExists' || code === 'KeyAlreadyExists' || code === 'already_exists' ||
+      (error.status === 400 && /^(the resource already exists|asset already exists)$/i.test(error.message))
+  }
   for (const result of [lg, sm]) {
     const error = result.error
     if (!error) continue
-    const code = (error as typeof error & { code?: string }).code
-    const alreadyUploaded = error.statusCode === '409' || error.status === 409 ||
-      code === 'ResourceAlreadyExists' || code === 'KeyAlreadyExists' || code === 'already_exists' ||
-      (error.status === 400 && /^(the resource already exists|asset already exists)$/i.test(error.message))
     // A retry may find a size uploaded on the previous attempt. Keep that file,
     // avoiding Storage upserts, which would require additional SELECT permissions.
-    if (!imageId || !alreadyUploaded) throw error
+    if (!imageId || !alreadyUploaded(error)) throw error
   }
 
   const row = {
@@ -184,15 +197,26 @@ export async function uploadProductImage(
     sort_order: sortOrder,
   }
   // A stable ID makes retries safe even if the server saved a photo but its response was lost.
-  const { error } = imageId
-    ? await supabase.from('product_images').upsert(row, { onConflict: 'id' })
-    : await supabase.from('product_images').insert(row)
+  const save = (values: typeof row & { path_share?: string }) =>
+    imageId
+      ? supabase.from('product_images').upsert(values, { onConflict: 'id' })
+      : supabase.from('product_images').insert(values)
+  // JPEG para compartilhar: numa nova tentativa ele pode já estar no Storage
+  const shareSaved = !share.error || (!!imageId && alreadyUploaded(share.error))
+  const withShare = shareSaved ? { ...row, path_share: `${base}-share.jpg` } : row
+  let { error } = await save(withShare)
+  // Banco ainda sem a migration 0007 (coluna path_share): grava sem o JPEG, a foto funciona igual
+  if (error && 'path_share' in withShare && /path_share/.test(error.message)) {
+    ;({ error } = await save(row))
+  }
   if (error) throw error
 }
 
 export async function deleteProductImage(image: StoredImage): Promise<void> {
   const supabase = requireSupabase()
-  await supabase.storage.from('product-images').remove([image.path_lg, image.path_sm])
+  await supabase.storage
+    .from('product-images')
+    .remove([image.path_lg, image.path_sm, ...(image.path_share ? [image.path_share] : [])])
   const { error } = await supabase.from('product_images').delete().eq('id', image.id)
   if (error) throw error
 }
@@ -226,7 +250,8 @@ export async function fetchOrders(): Promise<AdminOrder[]> {
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from('orders')
-    .select('id, order_number, customer_name, customer_phone, total_cents, item_count, status, admin_notes, created_at')
+    // select('*') funciona antes e depois da migration 0007 (coluna attribution)
+    .select('*')
     .order('created_at', { ascending: false })
     .limit(300)
   if (error) throw error
@@ -238,7 +263,7 @@ export async function fetchOrder(id: string): Promise<AdminOrderDetail | null> {
   const { data, error } = await supabase
     .from('orders')
     .select(
-      'id, order_number, customer_name, customer_phone, total_cents, item_count, status, admin_notes, created_at, order_items (id, product_id, product_name, product_code, size, shade, unit_price_cents, quantity, total_cents)',
+      '*, order_items (id, product_id, product_name, product_code, size, shade, unit_price_cents, quantity, total_cents)',
     )
     .eq('id', id)
     .maybeSingle()
@@ -263,6 +288,32 @@ export async function saveOrderNotes(id: string, notes: string): Promise<void> {
 export async function saveSettings(input: Settings): Promise<void> {
   const supabase = requireSupabase()
   const { error } = await supabase.from('settings').update(input).eq('id', 1)
+  if (error) throw error
+}
+
+export interface FaqState {
+  /** false = banco ainda sem a migration 0008 (coluna settings.faq) */
+  available: boolean
+  items: FaqItem[]
+  /** Nada salvo ainda: o site mostra as perguntas padrão */
+  isDefault: boolean
+}
+
+export async function fetchFaqForEdit(): Promise<FaqState> {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.from('settings').select('faq').eq('id', 1).single()
+  if (error) {
+    if (error.code === '42703' || /faq/i.test(error.message)) return { available: false, items: DEFAULT_FAQ, isDefault: true }
+    throw error
+  }
+  const saved = parseFaq((data as { faq: unknown }).faq)
+  return { available: true, items: saved ?? DEFAULT_FAQ, isDefault: saved === null }
+}
+
+/** null volta às perguntas padrão do site. */
+export async function saveFaq(items: FaqItem[] | null): Promise<void> {
+  const supabase = requireSupabase()
+  const { error } = await supabase.from('settings').update({ faq: items }).eq('id', 1)
   if (error) throw error
 }
 

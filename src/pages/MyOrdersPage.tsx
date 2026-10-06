@@ -14,6 +14,7 @@ import { formatBRPhone, isValidBRPhone } from '@/lib/phone'
 import { loadCustomer } from '@/lib/storage'
 import type { CustomerOrder } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { titles } from '@/seo/titles'
 
 const dateFmt = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim()
@@ -60,7 +61,7 @@ export function MyOrdersPage() {
 
   return (
     <div className="mx-auto max-w-lg px-5 pb-20 pt-10">
-      <title>Meus pedidos · Glamour Atacado</title>
+      <title>{titles.page('Meus pedidos')}</title>
 
       <h1 className="text-center text-2xl font-semibold text-malva-800">Meus pedidos</h1>
       <p className="mx-auto mt-2 max-w-sm text-center text-[15px] text-muted-foreground">

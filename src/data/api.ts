@@ -1,8 +1,10 @@
 import { DEFAULT_SETTINGS } from '@/config'
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/demo/catalog'
+import { attributionForOrder, type Attribution } from '@/lib/attribution'
 import { isValidBRPhone, normalizeBRPhone } from '@/lib/phone'
-import { photoUrl, supabase } from '@/lib/supabase'
+import { isDemo, photoUrl, restRpc, restSelect } from '@/lib/rest'
 import type { Category, CreatedOrder, CustomerOrder, Product, Settings } from '@/lib/types'
+import { parseFaq } from '@/seo/faq'
 
 export interface Catalog {
   categories: Category[]
@@ -24,34 +26,42 @@ export function toProduct(row: ProductRow): Product {
   return { ...rest, weight_g: rest.weight_g == null ? null : Number(rest.weight_g), photos }
 }
 
-/** Catálogo da loja: só categorias e peças ativas (mesmo que quem esteja vendo seja admin). */
+/** Catálogo da loja: só categorias e peças ativas (sempre como visitante, mesmo com o admin logado). */
 export async function fetchCatalog(): Promise<Catalog> {
-  if (!supabase) return { categories: DEMO_CATEGORIES, products: DEMO_PRODUCTS }
+  if (isDemo) return { categories: DEMO_CATEGORIES, products: DEMO_PRODUCTS }
 
   const [categories, products] = await Promise.all([
-    // select('*') funciona antes e depois da migration 0006 (coluna description)
-    supabase.from('categories').select('*').eq('active', true).order('sort_order'),
-    supabase.from('products').select(PRODUCT_COLUMNS).eq('active', true).order('created_at', { ascending: false }),
+    // select=* funciona antes e depois da migration 0006 (coluna description)
+    restSelect<Category[]>('categories', '*', ['active=eq.true', 'order=sort_order.asc']),
+    restSelect<ProductRow[]>('products', PRODUCT_COLUMNS, ['active=eq.true', 'order=created_at.desc']),
   ])
   if (categories.error) throw categories.error
   if (products.error) throw products.error
 
-  const activeIds = new Set((categories.data as Category[]).map((c) => c.id))
+  const activeIds = new Set(categories.data.map((c) => c.id))
   return {
-    categories: categories.data as Category[],
-    products: (products.data as unknown as ProductRow[]).map(toProduct).filter((p) => activeIds.has(p.category_id)),
+    categories: categories.data,
+    products: products.data.map(toProduct).filter((p) => activeIds.has(p.category_id)),
   }
 }
 
+type SettingsRow = Omit<Settings, 'faq'> & { faq?: unknown }
+
 export async function fetchSettings(): Promise<Settings> {
-  if (!supabase) return DEFAULT_SETTINGS
-  const { data, error } = await supabase
-    .from('settings')
-    .select('whatsapp_number, min_order_cents, pickup_text, hours_text, instagram_url')
-    .eq('id', 1)
-    .single()
+  if (isDemo) return DEFAULT_SETTINGS
+  // select=* funciona antes e depois da migration 0008 (coluna faq, as perguntas da página Como comprar)
+  const { data, error } = await restSelect<SettingsRow[]>('settings', '*', ['id=eq.1'])
   if (error) throw error
-  return data as Settings
+  const row = data[0]
+  if (!row) throw new Error('Configurações da loja não encontradas')
+  return {
+    whatsapp_number: row.whatsapp_number,
+    min_order_cents: row.min_order_cents,
+    pickup_text: row.pickup_text,
+    hours_text: row.hours_text,
+    instagram_url: row.instagram_url,
+    faq: parseFaq(row.faq),
+  }
 }
 
 export class OrderError extends Error {
@@ -69,17 +79,25 @@ export interface NewOrder {
   name: string
   phone: string
   items: Array<{ product_id: string; quantity: number }>
+  /** De onde a cliente chegou ao site; sem informar, usa a origem guardada neste aparelho */
+  attribution?: Attribution | null
 }
 
+/** O banco ainda não recebeu a migration 0007 (create_order sem o parâmetro da origem)? */
+const missingAttributionParam = (error: { code?: string; message?: string }) =>
+  error.code === 'PGRST202' || /p_attribution|could not find the function/i.test(error.message ?? '')
+
 export async function createOrder(input: NewOrder): Promise<CreatedOrder> {
-  if (!supabase) return createDemoOrder(input)
-  const { data, error } = await supabase.rpc('create_order', {
-    p_customer_name: input.name,
-    p_customer_phone: input.phone,
-    p_items: input.items,
-  })
-  if (error) throw new OrderError(error.message, error.details)
-  return data as CreatedOrder
+  if (isDemo) return createDemoOrder(input)
+  const base = { p_customer_name: input.name, p_customer_phone: input.phone, p_items: input.items }
+  const attribution = input.attribution === undefined ? attributionForOrder() : input.attribution
+  let result = await restRpc<CreatedOrder>('create_order', attribution ? { ...base, p_attribution: attribution } : base)
+  // Sem a migration 0007 aplicada, repete sem a origem: o pedido nunca para por causa dela
+  if (result.error && attribution && missingAttributionParam(result.error)) {
+    result = await restRpc<CreatedOrder>('create_order', base)
+  }
+  if (result.error) throw new OrderError(result.error.message, result.error.details)
+  return result.data
 }
 
 // Mesmas regras do create_order do banco, para o modo demonstração
@@ -151,10 +169,10 @@ function saveDemoOrder(order: CreatedOrder) {
 
 /** Consulta pedidos pelo WhatsApp (sem login). Erros chegam como OrderError; ver lib/orders.ts. */
 export async function fetchOrdersByPhone(phone: string): Promise<CustomerOrder[]> {
-  if (!supabase) return fetchDemoOrdersByPhone(phone)
-  const { data, error } = await supabase.rpc('get_orders_by_phone', { p_phone: phone })
+  if (isDemo) return fetchDemoOrdersByPhone(phone)
+  const { data, error } = await restRpc<CustomerOrder[] | null>('get_orders_by_phone', { p_phone: phone })
   if (error) throw new OrderError(error.message, error.details)
-  return (data ?? []) as CustomerOrder[]
+  return data ?? []
 }
 
 function fetchDemoOrdersByPhone(phone: string): CustomerOrder[] {

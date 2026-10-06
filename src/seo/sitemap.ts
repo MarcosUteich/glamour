@@ -32,8 +32,18 @@ const newest = (values: string[]) =>
     .sort()
     .at(-1)
 
-/** Home, novidades, categorias que têm peças, cada peça (com foto) e a página de privacidade. */
-export function buildSitemap(siteUrl: string, categories: SitemapCategory[], products: SitemapProduct[]): string {
+export interface SitemapOptions {
+  /** Última alteração em /admin → Config (pedido mínimo, retirada, perguntas): data da página Como comprar */
+  settingsUpdatedAt?: string
+}
+
+/** Home, novidades, categorias que têm peças, cada peça (com foto), Como comprar e Privacidade. */
+export function buildSitemap(
+  siteUrl: string,
+  categories: SitemapCategory[],
+  products: SitemapProduct[],
+  options: SitemapOptions = {},
+): string {
   const withProducts = new Set(products.map((p) => p.category_id))
   const latest = newest(products.map((p) => p.updated_at))
 
@@ -47,6 +57,7 @@ export function buildSitemap(siteUrl: string, categories: SitemapCategory[], pro
         lastmod: newest([c.updated_at, ...products.filter((p) => p.category_id === c.id).map((p) => p.updated_at)]),
       })),
     ...products.map((p) => ({ loc: `${siteUrl}/produto/${p.slug}`, lastmod: iso(p.updated_at), image: p.image })),
+    { loc: `${siteUrl}/como-comprar`, lastmod: options.settingsUpdatedAt ? iso(options.settingsUpdatedAt) : undefined },
     { loc: `${siteUrl}/privacidade` },
   ]
 

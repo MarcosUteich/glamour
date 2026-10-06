@@ -1,5 +1,6 @@
 import { Gem, ShoppingBag } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 import { WhatsAppIcon } from '@/components/brand/WhatsAppIcon'
 import { formatBRL } from '@/lib/money'
 
@@ -30,6 +31,11 @@ export function HowItWorks({ minOrderCents }: { minOrderCents: number }) {
           </li>
         ))}
       </ol>
+      <p className="-mt-2 pb-5 text-center text-[13px]">
+        <Link to="/como-comprar" className="font-semibold text-malva-700 underline underline-offset-4">
+          Veja como funciona o atacado
+        </Link>
+      </p>
     </section>
   )
 }

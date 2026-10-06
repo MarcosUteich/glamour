@@ -1,15 +1,19 @@
-# Glamour Atacado
+# Glamour Lindóia Atacado
 
-Catálogo de atacado da **Glamour Acessórios** (Lindóia Shopping, loja 160, Porto Alegre). O cliente
-monta um pedido de no mínimo **R$ 490** e envia pelo **WhatsApp** da loja; a retirada é na loja.
+Catálogo de atacado da **Glamour Lindóia** (Lindóia Shopping, loja 160, Porto Alegre). O cliente monta um pedido
+de no mínimo **R$ 499** (valor definido em `/admin` → Config) e envia pelo **WhatsApp** da loja; a retirada é
+na loja.
 
-Fluxo: catálogo → carrinho → pedido ≥ R$ 490 → nome + WhatsApp → mensagem pronta no WhatsApp.
+Fluxo: catálogo → carrinho → pedido ≥ mínimo → nome + WhatsApp → mensagem pronta no WhatsApp.
 
 ## Stack
 
-Vite + React + TypeScript + Tailwind v4 + Supabase (Postgres + Auth + Storage). SPA única;
-o painel `/admin` é carregado sob demanda. Sem backend próprio — as regras ficam em funções
-Postgres (`supabase/migrations/0003_functions.sql`).
+Vite + React + TypeScript + Tailwind v4 + Supabase (Postgres + Auth + Storage). O painel `/admin` é carregado
+sob demanda e usa o supabase-js; a loja fala com o banco por uma API REST leve (`src/lib/rest.ts`). As regras ficam
+em funções Postgres (`supabase/migrations/0003_functions.sql` e `0007`).
+O servidor Node (`server/index.ts`) entrega o SEO de cada página e já **monta a página no servidor**
+(`src/entry-server.tsx`): o HTML chega com textos, peças e links, e o React só hidrata. Na Vercel (`api/`), o SEO
+é o mesmo e a página é montada no navegador.
 
 ## Rodando
 
@@ -25,39 +29,48 @@ Sem as chaves do Supabase o site roda em **modo demonstração** com produtos de
 | Comando | O que faz |
 |---|---|
 | `npm run dev` | Servidor de desenvolvimento |
-| `npm run build` | Type-check + build de produção |
-| `npm run test` | Vitest (libs + regras do banco via PGlite) |
+| `npm run build` | Type-check + build do site (`dist/`) + build do servidor (`dist-server/`) |
+| `npm start` | Sobe o servidor de produção (site + SEO) na porta `PORT` (padrão 3000) |
+| `npm run test` | Vitest (libs, SEO, origem dos pedidos e regras do banco via PGlite) |
 | `npm run lint` | ESLint |
-| `npm run brand` | Regenera os arquivos de marca a partir do SVG da fachada |
-| `npm run artes` | Renderiza as artes de divulgação em `marketing/out/` |
+| `npm run brand` | Regenera o letreiro e o "G" a partir do SVG da fachada (otimizados com svgo) |
+| `npm run artes` | Renderiza as artes de divulgação em `marketing/out/` e, em `public/`, a arte de compartilhar, o logo, os ícones e o `favicon.ico` (pedido mínimo atual do painel) |
 
 ## Supabase
 
 Aplique na ordem, pelo SQL editor do projeto: `supabase/migrations/0001_schema.sql` a
-`0006_seo.sql` e depois `supabase/seed.sql` (ou `supabase/sample-data.sql` para ter peças de exemplo).
+`0008_como_comprar.sql` e depois `supabase/seed.sql` (ou `supabase/sample-data.sql` para ter peças de exemplo).
 Crie o usuário admin em Authentication e insira o `user_id` dele em `public.admins`.
 
 ## Deploy
 
-Vercel. O `vercel.json` manda as rotas públicas para `api/page.ts`, que entrega o `index.html`
-com título, canonical e dados estruturados de cada página, e responde 404 para peça que saiu
-do catálogo. Também serve `/sitemap.xml` e `/robots.txt` e agenda o cron diário do
-`api/keepalive.ts`, que evita a pausa do plano Free do Supabase. A lógica fica em `src/seo/`,
-testada com Vitest. Defina `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SITE_URL`,
-`VITE_GA_ID` e `VITE_META_PIXEL_ID` nas variáveis do projeto.
+Duas opções, com a mesma lógica de SEO (`src/seo/`, testada com Vitest):
 
-O passo a passo de Search Console, Google Analytics, Pixel da Meta e Perfil da Empresa no
-Google está em [`docs/SEO.md`](docs/SEO.md).
+- **VPS / Docker** (a loja está num VPS da Hostinger): `Dockerfile` pronto para Coolify, EasyPanel, Dokploy ou
+  `docker run`. O servidor entrega cada página já montada, com título, canonical, Open Graph e dados estruturados,
+  responde 404 para peça que saiu do catálogo, redireciona `www` e barras no fim, serve `/sitemap.xml`,
+  `/robots.txt` e `/catalogo.xml` (Meta) e faz o ping que evita a pausa do Supabase Free.
+- **Vercel** (plano Pro, para uso comercial): o `vercel.json` manda as rotas públicas para `api/page.ts` e
+  serve sitemap, robots e catálogo por funções; o cron diário `api/keepalive.ts` evita a pausa do Supabase Free.
+
+Variáveis: `VITE_SITE_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GA_ID`, `VITE_META_PIXEL_ID` e as
+opcionais do `.env.example`. O passo a passo de publicação, DNS, Search Console, Google Analytics, Google Ads,
+Pixel e catálogo da Meta, Perfil da Empresa e aviso de cookies está em [`docs/SEO.md`](docs/SEO.md).
 
 ## Estrutura
 
 ```
-src/lib/        dinheiro, telefone, WhatsApp, catálogo, tipos
+src/lib/        dinheiro, telefone, WhatsApp, catálogo, medição (tracking), cookies (consent), origem (attribution)
 src/store/      carrinho (zustand + localStorage) e sua lógica testável
 src/data/api.ts leitura do catálogo + create_order (com fallback de demonstração)
-src/pages/      loja: Home, ProductPage, OrderPage, OrderConfirmedPage, PrivacyPage
-src/admin/      painel: login, dashboard, pedidos, produtos, categorias, config
+src/pages/      loja: Home, ProductPage, OrderPage, OrderConfirmedPage, MyOrdersPage, PrivacyPage, HowToBuyPage
+src/admin/      painel: login, dashboard, pedidos, produtos, categorias, config (com as perguntas frequentes)
+src/seo/        dados da loja, títulos, head/JSON-LD, perguntas frequentes, sitemap, robots, catálogo da Meta, handlers
+src/routes.tsx  rotas (iguais no navegador e no servidor); client-pages.ts carrega as páginas sob demanda
+src/entry-server.tsx  página montada no servidor (usada por server/index.ts)
+server/         servidor Node de produção (VPS/Docker)
+api/            funções da Vercel (mesmos handlers de src/seo)
 supabase/       migrations + seed + testes de RLS/regras
 marketing/      templates HTML das artes + render.mjs
-scripts/        extract-logo.mjs (SVG da fachada → arquivos de marca)
+scripts/        extract-logo.mjs e brand-svg.mjs (SVG da fachada → arquivos de marca)
 ```

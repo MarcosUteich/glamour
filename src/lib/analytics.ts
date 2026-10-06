@@ -1,5 +1,5 @@
 import type { CartLine } from '@/store/cart-logic'
-import { supabase } from './supabase'
+import { isDemo, restInsert } from './rest'
 import { sendAdsEvent, type TrackedItem } from './tracking'
 import type { EventType, Product } from './types'
 
@@ -54,14 +54,8 @@ export function track(type: EventType, options: TrackOptions = {}) {
   }
 
   // order_created já é gravado pelo create_order no banco; aqui não repete
-  if (supabase && type !== 'order_created') {
-    void supabase
-      .from('events')
-      .insert({ type, product_id: productId, session_id: sessionId(), meta: options.meta ?? null })
-      .then(
-        () => undefined,
-        () => undefined,
-      )
+  if (!isDemo && type !== 'order_created') {
+    void restInsert('events', { type, product_id: productId, session_id: sessionId(), meta: options.meta ?? null })
   }
 
   try {

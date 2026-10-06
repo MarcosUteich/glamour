@@ -1,5 +1,5 @@
-/* Base das artes Glamour — malva + dourado, tipografia Montserrat + Yellowtail */
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Yellowtail&display=swap');
+/* Base das artes Glamour — malva + dourado, tipografia Montserrat + Yellowtail.
+   As fontes vêm dos pacotes @fontsource do próprio site (render.mjs embute): funciona sem internet. */
 
 * {
   margin: 0;

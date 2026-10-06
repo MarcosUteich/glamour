@@ -7,7 +7,19 @@ import { ProductCard } from './ProductCard'
 const PAGE_SIZE = 24
 
 /** Grade 2/3/4 colunas que vai mostrando mais peças conforme a rolagem. */
-export function ProductGrid({ products, categories }: { products: Product[]; categories: Category[] }) {
+export function ProductGrid({
+  products,
+  categories,
+  heading = 'h3',
+  eagerCount = 0,
+}: {
+  products: Product[]
+  categories: Category[]
+  /** Nível do nome de cada peça (ver ProductCard) */
+  heading?: 'h2' | 'h3' | 'p'
+  /** Quantas fotos do começo carregam já (as que aparecem na primeira tela do celular) */
+  eagerCount?: number
+}) {
   const [limit, setLimit] = useState(PAGE_SIZE)
   const sentinel = useRef<HTMLDivElement>(null)
   const hasMore = limit < products.length
@@ -29,9 +41,14 @@ export function ProductGrid({ products, categories }: { products: Product[]; cat
   return (
     <>
       <ul className="grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
-        {products.slice(0, limit).map((p) => (
+        {products.slice(0, limit).map((p, i) => (
           <li key={p.id}>
-            <ProductCard product={p} fallback={categoryArt(slugById.get(p.category_id))} />
+            <ProductCard
+              product={p}
+              fallback={categoryArt(slugById.get(p.category_id))}
+              heading={heading}
+              eager={i < eagerCount}
+            />
           </li>
         ))}
       </ul>

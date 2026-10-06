@@ -10,7 +10,9 @@ import { centsToInput, parseBRLToCents } from '@/lib/money'
 import { normalizeBRPhone } from '@/lib/phone'
 import type { Settings } from '@/lib/types'
 import { saveSettings } from './api'
+import { FaqEditor } from './FaqEditor'
 import { AdminCard, PageTitle } from './ui'
+import { PICKUP_TEXT } from '@/seo/business'
 
 export function SettingsPage() {
   const qc = useQueryClient()
@@ -62,14 +64,14 @@ export function SettingsPage() {
         </div>
         <div className="space-y-1.5">
           <Label>Pedido mínimo</Label>
-          <Input inputMode="decimal" value={form.min} onChange={(e) => setForm({ ...form, min: e.target.value })} placeholder="490,00" />
+          <Input inputMode="decimal" value={form.min} onChange={(e) => setForm({ ...form, min: e.target.value })} placeholder="499,00" />
         </div>
         <div className="space-y-1.5">
           <Label>Texto de retirada</Label>
           <Textarea
             value={form.pickup}
             onChange={(e) => setForm({ ...form, pickup: e.target.value })}
-            placeholder="Glamour Acessórios · Lindóia Shopping · Loja 160 · Av. Assis Brasil, 3522 · Porto Alegre/RS"
+            placeholder={PICKUP_TEXT}
           />
         </div>
         <div className="space-y-1.5">
@@ -77,7 +79,7 @@ export function SettingsPage() {
           <Input
             value={form.hours}
             onChange={(e) => setForm({ ...form, hours: e.target.value })}
-            placeholder="Seg. a sáb., 10h às 22h"
+            placeholder="Segunda a sábado, das 10h às 21h"
           />
         </div>
         <div className="space-y-1.5">
@@ -104,6 +106,7 @@ export function SettingsPage() {
           Salvar configurações
         </Button>
       </AdminCard>
+      <FaqEditor />
     </div>
   )
 }

@@ -1,44 +1,14 @@
-import { lazy, Suspense } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router'
+import type { QueryClient } from '@tanstack/react-query'
+import { BrowserRouter } from 'react-router'
+import { clientPages } from '@/client-pages'
 import { Providers } from '@/components/Providers'
-import { StoreLayout } from '@/components/store/StoreLayout'
-import { Home } from '@/pages/Home'
-import { NotFoundPage } from '@/pages/NotFoundPage'
+import { AppRoutes } from '@/routes'
 
-const ProductPage = lazy(() => import('@/pages/ProductPage').then((m) => ({ default: m.ProductPage })))
-const OrderPage = lazy(() => import('@/pages/OrderPage').then((m) => ({ default: m.OrderPage })))
-const OrderConfirmedPage = lazy(() =>
-  import('@/pages/OrderConfirmedPage').then((m) => ({ default: m.OrderConfirmedPage })),
-)
-const PrivacyPage = lazy(() => import('@/pages/PrivacyPage').then((m) => ({ default: m.PrivacyPage })))
-const MyOrdersPage = lazy(() => import('@/pages/MyOrdersPage').then((m) => ({ default: m.MyOrdersPage })))
-const AdminApp = lazy(() => import('@/admin/AdminApp').then((m) => ({ default: m.AdminApp })))
-
-const Loading = () => (
-  <div className="grid min-h-dvh place-items-center">
-    <span className="size-8 animate-spin rounded-full border-2 border-malva-200 border-t-malva-500" />
-  </div>
-)
-
-export default function App() {
+export default function App({ queryClient }: { queryClient: QueryClient }) {
   return (
-    <Providers>
+    <Providers client={queryClient}>
       <BrowserRouter>
-        <Suspense fallback={<Loading />}>
-          <Routes>
-            <Route element={<StoreLayout />}>
-              <Route index element={<Home />} />
-              <Route path="categoria/:slug" element={<Home />} />
-              <Route path="produto/:slug" element={<ProductPage />} />
-              <Route path="pedido" element={<OrderPage />} />
-              <Route path="pedido/confirmado/:orderNumber" element={<OrderConfirmedPage />} />
-              <Route path="meus-pedidos" element={<MyOrdersPage />} />
-              <Route path="privacidade" element={<PrivacyPage />} />
-            </Route>
-            <Route path="admin/*" element={<AdminApp />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Suspense>
+        <AppRoutes pages={clientPages} />
       </BrowserRouter>
     </Providers>
   )

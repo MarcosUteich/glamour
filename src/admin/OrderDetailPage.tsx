@@ -9,10 +9,13 @@ import { buttonVariants } from '@/components/ui/button-variants'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { useSettings } from '@/hooks/useCatalog'
+import { SITE_URL } from '@/config'
+import { describeTouch } from '@/lib/attribution'
 import { formatBRL } from '@/lib/money'
 import { formatBRPhone, toWhatsAppNumber } from '@/lib/phone'
 import type { OrderStatus } from '@/lib/orders'
 import { buildCustomerMessage, whatsappLink } from '@/lib/whatsapp'
+import { BUSINESS } from '@/seo/business'
 import { changeOrderStatus, fetchOrder, saveOrderNotes } from './api'
 import { AdminCard, PageTitle, StatusSelect } from './ui'
 
@@ -67,6 +70,8 @@ export function OrderDetailPage() {
       totalCents: order.total_cents,
       pickupText: settings.pickup_text,
       hoursText: settings.hours_text,
+      catalogUrl: SITE_URL,
+      reviewUrl: BUSINESS.reviewUrl,
     }),
   )
 
@@ -90,6 +95,24 @@ export function OrderDetailPage() {
           </button>
         </div>
       </AdminCard>
+
+      {order.attribution?.last && (
+        <AdminCard className="mb-4">
+          <p className="text-sm font-semibold text-malva-800">Origem do pedido</p>
+          <p className="mt-1 text-sm text-tinta">{describeTouch(order.attribution.last)}</p>
+          {order.attribution.last.ids && (
+            <p className="text-[12px] text-muted-foreground">
+              Veio de um anúncio ({Object.keys(order.attribution.last.ids).join(', ')})
+            </p>
+          )}
+          {order.attribution.first && order.attribution.first.at !== order.attribution.last.at && (
+            <p className="text-[12px] text-muted-foreground">
+              Primeira visita: {describeTouch(order.attribution.first)} em{' '}
+              {dateFmt.format(new Date(order.attribution.first.at))}
+            </p>
+          )}
+        </AdminCard>
+      )}
 
       <AdminCard className="mb-4">
         <label className="text-sm font-semibold text-malva-800" htmlFor="status">

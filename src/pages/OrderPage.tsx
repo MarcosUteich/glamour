@@ -20,6 +20,7 @@ import { loadCustomer, saveCustomer, saveLastOrder } from '@/lib/storage'
 import { buildOrderWhatsApp } from '@/lib/whatsapp'
 import { useCart, useCartTotals } from '@/store/cart'
 import { useMutation } from '@tanstack/react-query'
+import { titles } from '@/seo/titles'
 
 type Step = 'carrinho' | 'dados' | 'revisao'
 const STEPS: Step[] = ['carrinho', 'dados', 'revisao']
@@ -101,7 +102,7 @@ export function OrderPage() {
   if (pieces === 0) {
     return (
       <div className="mx-auto max-w-md px-6 py-20 text-center">
-        <title>Seu pedido · Glamour Atacado</title>
+        <title>{titles.page('Seu pedido')}</title>
         <p className="text-lg font-semibold text-malva-800">Seu pedido está vazio</p>
         <p className="mt-1 text-sm text-muted-foreground">Escolha as peças no catálogo para montar seu pedido de atacado.</p>
         <Link to="/" className={buttonVariants({ className: 'mt-6' })}>
@@ -117,7 +118,7 @@ export function OrderPage() {
 
   return (
     <div className="mx-auto max-w-xl px-4 pb-24 pt-4 sm:px-6">
-      <title>Seu pedido · Glamour Atacado</title>
+      <title>{titles.page('Seu pedido')}</title>
       <StepHeader step={step} onBack={step === 'carrinho' ? () => navigate('/') : () => goTo(STEPS[STEPS.indexOf(step) - 1])} />
 
       {step === 'carrinho' && (

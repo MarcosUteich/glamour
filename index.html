@@ -4,14 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#A86478" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml" />
-    <link rel="icon" href="/brand/icon-192.png" type="image/png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <!-- Título, descrição, canonical, Open Graph e JSON-LD: a home recebe no build (vite.config.ts)
-         e as demais páginas recebem na função api/page.ts. Não mexa nos marcadores abaixo. -->
+         e as demais páginas recebem no servidor (server/index.ts) ou na função da Vercel (api/page.ts).
+         No servidor Node, o <div id="root"> também chega com a página montada (src/entry-server.tsx).
+         Não mexa nos marcadores abaixo. -->
     <!-- seo:start -->
-    <title>Glamour Atacado</title>
+    <title>Glamour Lindóia Atacado</title>
     <!-- seo:end -->
   </head>
   <body>

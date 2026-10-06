@@ -72,6 +72,7 @@ export function OrdersPage() {
                   <p className="truncate text-sm text-tinta">{o.customer_name}</p>
                   <p className="text-[12px] text-muted-foreground">
                     {formatBRPhone(o.customer_phone)} · {dateFmt.format(new Date(o.created_at))}
+                    {o.attribution?.last?.source && o.attribution.last.source !== 'direto' && ` · via ${o.attribution.last.source}`}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">

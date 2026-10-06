@@ -7,6 +7,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { optimizePath } from './brand-svg.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const SRC = join(root, 'brand-src', 'fachada_glamour_325x60cm.svg')
@@ -34,11 +35,15 @@ const dots = shapes.filter((s) => !letters.includes(s)).sort((a, b) => a.box.min
 if (letters.length !== 2 || dots.length !== 4) {
   throw new Error(`Esperava 2 paths de letras e 4 pontos, encontrei ${letters.length} e ${dots.length}`)
 }
-const [monogram] = letters
-
 const wordmarkBox = viewBoxFor([...letters, ...dots])
 const lettersBox = viewBoxFor(letters)
-const monogramBox = viewBoxFor([monogram])
+const monogramBox = viewBoxFor([letters[0]])
+
+// As caixas vêm dos paths exatos; o que vai para os arquivos é a versão otimizada (mesmo desenho, ~1/5 do tamanho)
+const compact = (list) => list.map((s) => ({ ...s, d: optimizePath(s.d, wordmarkBox.viewBox) }))
+letters.splice(0, letters.length, ...compact(letters))
+dots.splice(0, dots.length, ...compact(dots))
+const [monogram] = letters
 
 const svgDoc = (box, body) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${box.viewBox}" width="${box.width}" height="${box.height}">${body}</svg>\n`

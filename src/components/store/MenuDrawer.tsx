@@ -1,4 +1,4 @@
-import { AtSign, Clock, History, MapPin, Menu, ShoppingBag, X } from 'lucide-react'
+import { AtSign, CircleHelp, Clock, History, MapPin, Menu, ShoppingBag, X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
 import { WhatsAppIcon } from '@/components/brand/WhatsAppIcon'
@@ -72,6 +72,14 @@ export function MenuDrawer() {
             <Tile to="/meus-pedidos" onClick={close} icon={<History className="size-5 md:size-6" strokeWidth={1.6} />}>
               Meus pedidos
             </Tile>
+            <Tile
+              to="/como-comprar"
+              onClick={close}
+              icon={<CircleHelp className="size-5 md:size-6" strokeWidth={1.6} />}
+              className="col-span-2 flex-row items-center"
+            >
+              Como comprar
+            </Tile>
           </div>
         </nav>
 
@@ -140,11 +148,13 @@ function Tile({
   to,
   onClick,
   icon,
+  className,
   children,
 }: {
   to: string
   onClick: () => void
   icon: ReactNode
+  className?: string
   children: ReactNode
 }) {
   const { pathname } = useLocation()
@@ -161,6 +171,7 @@ function Tile({
         active
           ? 'border-malva-500 bg-malva-500 text-white'
           : 'border-border bg-white text-tinta hover:border-malva-300',
+        className,
       )}
     >
       <span className={active ? 'text-white' : 'text-malva-500'}>{icon}</span>
