@@ -40,7 +40,19 @@ export interface Product {
   photos: ProductPhoto[]
 }
 
+export interface Banner {
+  id: string
+  title: string
+  image_url: string
+  mobile_image_url: string
+  link: string
+  duration_seconds: number
+  active: boolean
+}
+
 export interface Settings {
+  banners?: Banner[]
+
   whatsapp_number: string
   /** Pedido mínimo, somando os preços de atacado */
   min_order_cents: number

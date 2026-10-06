@@ -91,6 +91,7 @@ export async function fetchSettings(): Promise<Settings> {
     hours_text: row.hours_text,
     instagram_url: row.instagram_url,
     faq: parseFaq(row.faq),
+    banners: row.banners,
   }
 }
 

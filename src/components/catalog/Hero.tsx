@@ -1,3 +1,6 @@
+import { useSettings } from '@/hooks/useCatalog'
+import { BannerCarousel } from './BannerCarousel'
+
 export function Hero({
   minOrderCents,
   onShop,
@@ -5,6 +8,9 @@ export function Hero({
   minOrderCents: number
   onShop: () => void
 }) {
+  const banners = useSettings().banners?.filter((banner) => banner.active) ?? []
+  if (banners.length) return <BannerCarousel key={JSON.stringify(banners)} banners={banners} />
+
   const minOrder = (minOrderCents / 100).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
@@ -12,9 +18,7 @@ export function Hero({
 
   return (
     <section className="w-full overflow-hidden bg-[#f8e5e2]">
-      {/* ───────── DESKTOP (≥1024px): banner completo ───────── */}
-      {/* A arte não traz o valor do pedido mínimo: ele entra por cima, vindo de /admin → Config, no lugar e no
-          tamanho exatos da arte (posição em % e fonte em cqw acompanham a largura da imagem) */}
+
       <div className="@container relative hidden lg:block">
         <img
           src="/hero-desktop.jpg"
@@ -27,13 +31,12 @@ export function Hero({
         />
         <span
           aria-hidden="true"
-          className="absolute left-[10.6%] top-[81.83%] whitespace-nowrap text-[length:1.5125cqw] font-bold leading-none text-[#66394a]"
+          className="absolute left-[10.6%] top-[81.83%] whitespace-nowrap text-[1.5125cqw] font-bold leading-none text-[#66394a]"
         >
           {minOrder}
         </span>
       </div>
 
-      {/* ───────── MOBILE / TABLET (<1024px): foto + texto em HTML ───────── */}
       <div className="lg:hidden">
         <div className="relative mx-auto w-full max-w-160">
           <img
@@ -46,7 +49,7 @@ export function Hero({
             fetchPriority="high"
             decoding="async"
           />
-          {/* degradê que dissolve a foto no fundo rosado */}
+
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-[#f8e5e2] via-[#f8e5e2]/70 to-transparent" />
         </div>
 

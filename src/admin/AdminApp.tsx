@@ -13,6 +13,7 @@ import { OrdersPage } from './OrdersPage'
 import { ProductFormPage } from './ProductFormPage'
 import { ProductsPage } from './ProductsPage'
 import { SettingsPage } from './SettingsPage'
+import { BannersPage } from './BannersPage'
 
 export function AdminApp() {
   if (isDemo) return <NeedsSupabase />
@@ -47,6 +48,7 @@ function Gate() {
         <Route path="produtos/novo" element={<ProductFormPage />} />
         <Route path="produtos/:id/editar" element={<ProductFormPage />} />
         <Route path="categorias" element={<CategoriesPage />} />
+        <Route path="banners" element={<BannersPage />} />
         <Route path="config" element={<SettingsPage />} />
         <Route path="*" element={<DashboardPage />} />
       </Routes>

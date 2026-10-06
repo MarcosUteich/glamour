@@ -1,4 +1,4 @@
-import { BarChart3, LogOut, Package, ClipboardList, Settings2, Tags, Users } from 'lucide-react'
+import { BarChart3, LogOut, Package, ClipboardList, Settings2, Tags, Users, Images } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router'
 import { Wordmark } from '@/components/brand/Wordmark'
@@ -11,6 +11,7 @@ const NAV = [
   { to: '/admin/leads', label: 'Leads', icon: Users },
   { to: '/admin/produtos', label: 'Produtos', icon: Package },
   { to: '/admin/categorias', label: 'Categorias', icon: Tags },
+  { to: '/admin/banners', label: 'Banners', icon: Images },
   { to: '/admin/config', label: 'Config', icon: Settings2 },
 ]
 
@@ -19,7 +20,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-dvh bg-background pb-20 sm:pb-0 sm:pl-56">
-      <aside className="fixed inset-x-0 bottom-0 z-40 flex justify-around border-t border-border bg-white sm:inset-y-0 sm:left-0 sm:w-56 sm:flex-col sm:justify-start sm:border-r sm:border-t-0 sm:px-3 sm:py-5">
+      <aside className="fixed inset-x-0 bottom-0 z-40 flex overflow-x-auto border-t border-border bg-white sm:inset-y-0 sm:left-0 sm:w-56 sm:flex-col sm:justify-start sm:border-r sm:border-t-0 sm:px-3 sm:py-5">
         <div className="hidden px-2 sm:block">
           <Wordmark className="w-28 text-malva-500" dotsClassName="fill-dourado" />
           <p className="mb-6 mt-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-muted-foreground">
@@ -33,7 +34,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             end={item.end}
             className={({ isActive }) =>
               cn(
-                'flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium sm:flex-none sm:flex-row sm:gap-2.5 sm:rounded-xl sm:px-3 sm:py-2.5 sm:text-sm',
+                'flex min-w-16 flex-1 shrink-0 flex-col items-center gap-0.5 py-2 text-[11px] font-medium sm:min-w-0 sm:flex-none sm:flex-row sm:gap-2.5 sm:rounded-xl sm:px-3 sm:py-2.5 sm:text-sm',
                 isActive ? 'text-malva-700 sm:bg-malva-100' : 'text-muted-foreground sm:hover:bg-malva-50',
               )
             }
