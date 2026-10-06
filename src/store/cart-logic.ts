@@ -7,6 +7,7 @@ export interface CartLine {
   code: string
   size: string | null
   shade: string | null
+  /** Preço de atacado, o que a cliente paga por unidade */
   priceCents: number
   photo: string | null
   stock: number | null
@@ -27,7 +28,7 @@ export function lineFromProduct(product: Product, quantity: number): CartLine {
     code: product.code,
     size: product.size,
     shade: product.shade,
-    priceCents: product.price_cents,
+    priceCents: product.wholesale_price_cents,
     photo: product.photos[0]?.sm ?? null,
     stock: product.stock,
     quantity,
@@ -88,7 +89,7 @@ export function syncLines(lines: CartLine[], products: Product[]): { lines: Cart
     }
     const quantity = Math.min(line.quantity, max)
     if (quantity < line.quantity) changes.push(`${product.name}: ajustado para ${quantity} (estoque)`)
-    if (product.price_cents !== line.priceCents) changes.push(`${product.name}: preço atualizado`)
+    if (product.wholesale_price_cents !== line.priceCents) changes.push(`${product.name}: preço atualizado`)
     next.push(lineFromProduct(product, quantity))
   }
 

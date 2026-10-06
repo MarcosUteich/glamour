@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { PGlite } from '@electric-sql/pglite'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { wholesalePriceCents } from '../../src/seo/pricing'
 
 const root = join(import.meta.dirname, '..')
 const sql = (file: string) => readFileSync(join(root, file), 'utf8')
@@ -69,6 +70,7 @@ beforeAll(async () => {
     '0006_seo.sql',
     '0007_origem_e_fotos.sql',
     '0008_como_comprar.sql',
+    '0009_desconto_atacado.sql',
   ]
   for (const file of migrations) {
     await db.exec(sql(`migrations/${file}`))
@@ -427,5 +429,85 @@ describe('perguntas da página Como comprar (migration 0008)', () => {
   it('pode rodar de novo sem erro', async () => {
     await db.exec(sql('migrations/0008_como_comprar.sql'))
     expect((await db.query<{ faq: unknown }>('select faq from public.settings')).rows[0].faq).toEqual(FAQ)
+  })
+})
+
+describe('desconto de atacado (migration 0009)', () => {
+  const setDiscount = (pct: number) =>
+    as('authenticated', ADMIN, () => db.query('update public.settings set wholesale_discount_pct = $1', [pct]))
+  const discount = async () =>
+    (await db.query<{ pct: number }>('select wholesale_discount_pct as pct from public.settings')).rows[0].pct
+
+  it('começa em 0% (nada muda) e o visitante lê', async () => {
+    const rows = await as('anon', null, async () => (await db.query('select wholesale_discount_pct from public.settings')).rows)
+    expect(rows[0]).toEqual({ wholesale_discount_pct: 0 })
+  })
+
+  it('só o admin muda o desconto, de 0 a 90%', async () => {
+    await as('anon', null, () => db.query('update public.settings set wholesale_discount_pct = 50'))
+    await as('authenticated', CUSTOMER_USER, () => db.query('update public.settings set wholesale_discount_pct = 50'))
+    expect(await discount()).toBe(0)
+    await expect(setDiscount(95)).rejects.toThrow(/check constraint/)
+    await expect(setDiscount(-1)).rejects.toThrow(/check constraint/)
+  })
+
+  it('o pedido é cobrado pelo preço de atacado', async () => {
+    await setDiscount(30)
+    try {
+      const r = await as('anon', null, () =>
+        createOrder('51966660001', [
+          { product_id: P_BRINCO, quantity: 20 },
+          { product_id: P_COLAR, quantity: 3 },
+        ]),
+      )
+      // 24,90 → 17,43 e 79,90 → 55,93
+      expect(r.items).toEqual([
+        expect.objectContaining({ code: 'BR-101', unit_price_cents: 1743, total_cents: 20 * 1743 }),
+        expect.objectContaining({ code: 'CL-101', unit_price_cents: 5593, total_cents: 3 * 5593 }),
+      ])
+      expect(r.total_cents).toBe(20 * 1743 + 3 * 5593)
+      const saved = await db.query<{ unit_price_cents: number }>(
+        `select oi.unit_price_cents from public.order_items oi join public.orders o on o.id = oi.order_id
+         where o.order_number = $1 order by oi.product_code`,
+        [r.order_number],
+      )
+      expect(saved.rows.map((row) => row.unit_price_cents)).toEqual([1743, 5593])
+    } finally {
+      await setDiscount(0)
+    }
+  })
+
+  it('o pedido mínimo conta o total já com desconto', async () => {
+    // 20 brincos: R$ 498,00 cheio (passa do mínimo de R$ 490), R$ 348,60 com 30% (não passa)
+    await setDiscount(30)
+    try {
+      await expect(
+        as('anon', null, () => createOrder('51966660002', [{ product_id: P_BRINCO, quantity: 20 }])),
+      ).rejects.toThrow(/below_minimum/)
+    } finally {
+      await setDiscount(0)
+    }
+  })
+
+  it('a conta do banco é a mesma do site (src/seo/pricing.ts)', async () => {
+    const prices = [1, 99, 101, 990, 1290, 1999, 2490, 4990, 7990, 12345, 99999, 1000050]
+    const { rows } = await db.query<{ p: number; d: number; w: number }>(
+      `select p, d, public.wholesale_price_cents(p, d) as w
+       from unnest($1::integer[]) as p, generate_series(0, 90) as d`,
+      [prices],
+    )
+    expect(rows).toHaveLength(prices.length * 91)
+    const mismatches = rows.filter((row) => row.w !== wholesalePriceCents(row.p, row.d))
+    expect(mismatches).toEqual([])
+  })
+
+  it('pode rodar de novo sem erro e mantém o desconto salvo', async () => {
+    await setDiscount(25)
+    try {
+      await db.exec(sql('migrations/0009_desconto_atacado.sql'))
+      expect(await discount()).toBe(25)
+    } finally {
+      await setDiscount(0)
+    }
   })
 })

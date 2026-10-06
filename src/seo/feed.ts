@@ -4,6 +4,7 @@
 // ao produto. Sem dependências do app.
 import { BUSINESS } from './business'
 import { escapeHtml } from './html'
+import { hasWholesaleDiscount } from './pricing'
 import { reais, SITE_NAME } from './titles'
 
 export interface FeedProduct {
@@ -15,7 +16,10 @@ export interface FeedProduct {
   plating: string | null
   size: string | null
   shade: string | null
+  /** Preço original */
   price_cents: number
+  /** Preço de atacado (o cobrado), com o desconto de /admin → Config */
+  wholesale_price_cents: number
   stock: number | null
   /** Fotos grandes (WebP), a capa primeiro */
   images: string[]
@@ -57,7 +61,10 @@ export function buildFeed(siteUrl: string, products: FeedProduct[]): string {
         ...extra.map((url) => tag('additional_image_link', url)),
         tag('availability', p.stock === 0 ? 'out of stock' : 'in stock'),
         tag('condition', 'new'),
+        // Com desconto de atacado, o original vai em price e o de atacado em sale_price (a Meta e o Google
+        // mostram o original riscado); sem desconto, um preço só
         tag('price', `${reais(p.price_cents)} BRL`),
+        hasWholesaleDiscount(p) ? tag('sale_price', `${reais(p.wholesale_price_cents)} BRL`) : null,
         tag('brand', BUSINESS.name),
         tag('identifier_exists', 'no'),
         tag('google_product_category', googleCategory(p.category?.slug)),

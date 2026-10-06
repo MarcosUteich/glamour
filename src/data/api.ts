@@ -1,10 +1,11 @@
 import { DEFAULT_SETTINGS } from '@/config'
-import { DEMO_CATEGORIES, DEMO_PRODUCTS } from '@/demo/catalog'
+import { DEMO_CATEGORIES, DEMO_PRODUCTS, DEMO_WHOLESALE_DISCOUNT_PCT } from '@/demo/catalog'
 import { attributionForOrder, type Attribution } from '@/lib/attribution'
 import { isValidBRPhone, normalizeBRPhone } from '@/lib/phone'
-import { isDemo, photoUrl, restRpc, restSelect } from '@/lib/rest'
+import { isDemo, photoUrl, restRpc, restSelect, type RestError } from '@/lib/rest'
 import type { Category, CreatedOrder, CustomerOrder, Product, Settings } from '@/lib/types'
 import { parseFaq } from '@/seo/faq'
+import { normalizeDiscountPct, withWholesalePrice } from '@/seo/pricing'
 
 export interface Catalog {
   categories: Category[]
@@ -14,26 +15,51 @@ export interface Catalog {
 export const PRODUCT_COLUMNS =
   'id, category_id, name, slug, code, description, material, plating, size, shade, weight_g, price_cents, stock, active, created_at, product_images (path_sm, path_lg, sort_order)'
 
-export interface ProductRow extends Omit<Product, 'photos'> {
+export interface ProductRow extends Omit<Product, 'photos' | 'wholesale_price_cents'> {
   product_images: Array<{ path_sm: string; path_lg: string; sort_order: number }> | null
 }
 
-export function toProduct(row: ProductRow): Product {
+/** Linha do banco → peça, já com o preço de atacado (desconto de /admin → Config). */
+export function toProduct(row: ProductRow, discountPct: number): Product {
   const { product_images, ...rest } = row
   const photos = [...(product_images ?? [])]
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((img) => ({ sm: photoUrl(img.path_sm), lg: photoUrl(img.path_lg) }))
-  return { ...rest, weight_g: rest.weight_g == null ? null : Number(rest.weight_g), photos }
+  const product = { ...rest, weight_g: rest.weight_g == null ? null : Number(rest.weight_g), photos }
+  return withWholesalePrice(product, discountPct)
+}
+
+/** O banco ainda não recebeu a migration 0009 (coluna settings.wholesale_discount_pct)? */
+const missingDiscountColumn = (error: RestError) =>
+  error.code === '42703' || /wholesale_discount_pct/.test(error.message)
+
+/**
+ * Desconto do atacado (/admin → Config). Vem junto com o catálogo, para preço e peças saírem sempre da mesma
+ * leitura (sem piscar o preço cheio enquanto as configurações carregam). Sem a migration 0009, 0%.
+ */
+export async function fetchWholesaleDiscountPct(): Promise<number> {
+  if (isDemo) return DEMO_WHOLESALE_DISCOUNT_PCT
+  const { data, error } = await restSelect<Array<{ wholesale_discount_pct?: number }>>(
+    'settings',
+    'wholesale_discount_pct',
+    ['id=eq.1'],
+  )
+  if (error) {
+    if (missingDiscountColumn(error)) return 0
+    throw error
+  }
+  return normalizeDiscountPct(data[0]?.wholesale_discount_pct)
 }
 
 /** Catálogo da loja: só categorias e peças ativas (sempre como visitante, mesmo com o admin logado). */
 export async function fetchCatalog(): Promise<Catalog> {
   if (isDemo) return { categories: DEMO_CATEGORIES, products: DEMO_PRODUCTS }
 
-  const [categories, products] = await Promise.all([
+  const [categories, products, discountPct] = await Promise.all([
     // select=* funciona antes e depois da migration 0006 (coluna description)
     restSelect<Category[]>('categories', '*', ['active=eq.true', 'order=sort_order.asc']),
     restSelect<ProductRow[]>('products', PRODUCT_COLUMNS, ['active=eq.true', 'order=created_at.desc']),
+    fetchWholesaleDiscountPct(),
   ])
   if (categories.error) throw categories.error
   if (products.error) throw products.error
@@ -41,7 +67,7 @@ export async function fetchCatalog(): Promise<Catalog> {
   const activeIds = new Set(categories.data.map((c) => c.id))
   return {
     categories: categories.data,
-    products: products.data.map(toProduct).filter((p) => activeIds.has(p.category_id)),
+    products: products.data.map((row) => toProduct(row, discountPct)).filter((p) => activeIds.has(p.category_id)),
   }
 }
 
@@ -57,6 +83,10 @@ export async function fetchSettings(): Promise<Settings> {
   return {
     whatsapp_number: row.whatsapp_number,
     min_order_cents: row.min_order_cents,
+    // select=* traz a coluna depois da migration 0009; antes dela, fica ausente (o painel avisa)
+    ...(row.wholesale_discount_pct === undefined
+      ? {}
+      : { wholesale_discount_pct: normalizeDiscountPct(row.wholesale_discount_pct) }),
     pickup_text: row.pickup_text,
     hours_text: row.hours_text,
     instagram_url: row.instagram_url,
@@ -119,9 +149,9 @@ function createDemoOrder(input: NewOrder): CreatedOrder {
       code: p.code,
       size: p.size,
       shade: p.shade,
-      unit_price_cents: p.price_cents,
+      unit_price_cents: p.wholesale_price_cents,
       quantity,
-      total_cents: p.price_cents * quantity,
+      total_cents: p.wholesale_price_cents * quantity,
     }
   })
 

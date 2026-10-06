@@ -34,7 +34,9 @@ describe('páginas montadas no servidor', () => {
   it('peça sai com nome, preço, foto em prioridade e detalhes', () => {
     const html = plain(renderStorePage(`/produto/${product.slug}`, data))
     expect(html).toContain(`<h1 class="mt-2 text-2xl font-semibold leading-tight text-tinta sm:text-3xl">${product.name}</h1>`)
-    expect(html).toContain('R$ 24,90')
+    // Demonstração com 30% de desconto: o de atacado em destaque e o original riscado
+    expect(html).toContain('R$ 17,43')
+    expect(html).toMatch(/<s [^>]*>.*R\$ 24,90<\/s>/)
     expect(html).toContain('Detalhes da peça')
     expect(html).toMatch(/fetchPriority="high"/)
   })

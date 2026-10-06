@@ -2,6 +2,7 @@
 import { categoryArt } from '@/lib/placeholders'
 import { slugify } from '@/lib/slug'
 import type { Category, Product } from '@/lib/types'
+import { withWholesalePrice } from '@/seo/pricing'
 
 const CATEGORIES: Array<[slug: string, name: string, prefix: string]> = [
   ['brincos', 'Brincos', 'BR'],
@@ -26,6 +27,9 @@ export const DEMO_CATEGORIES: Category[] = CATEGORIES.map(([slug, name, prefix],
   sort_order: (i + 1) * 10,
   active: true,
 }))
+
+/** Desconto do atacado no modo demonstração (no site real vem de /admin → Config) */
+export const DEMO_WHOLESALE_DISCOUNT_PCT = 30
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString()
 const gold = { material: 'Latão', plating: 'Ouro 18k' }
@@ -69,4 +73,6 @@ export const DEMO_PRODUCTS: Product[] = SEEDS.map(([category, code, name, priceC
   created_at: daysAgo(40 + i),
   photos: [{ sm: categoryArt(category), lg: categoryArt(category) }],
   ...extra,
-})).sort((a, b) => b.created_at.localeCompare(a.created_at))
+}))
+  .map((product) => withWholesalePrice(product, DEMO_WHOLESALE_DISCOUNT_PCT))
+  .sort((a, b) => b.created_at.localeCompare(a.created_at))

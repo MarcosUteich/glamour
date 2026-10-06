@@ -8,10 +8,11 @@ import { buttonVariants } from '@/components/ui/button-variants'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { isSoldOut } from '@/lib/catalog'
-import { centsToInput, parseBRLToCents } from '@/lib/money'
+import { centsToInput, formatBRL, parseBRLToCents } from '@/lib/money'
 import { categoryArt } from '@/lib/placeholders'
 import { normalizeText } from '@/lib/slug'
 import type { Product } from '@/lib/types'
+import { hasWholesaleDiscount } from '@/seo/pricing'
 import { deleteProduct, fetchAllCategories, fetchAllProducts, setProductField } from './api'
 import { EmptyState, FilterChip, PageTitle } from './ui'
 
@@ -208,6 +209,11 @@ function Row({
               className="w-20 rounded-lg border border-input bg-white px-2 py-1 text-sm text-tinta tabular-nums"
             />
           </label>
+          {hasWholesaleDiscount(product) && (
+            <span className="text-[12px] tabular-nums text-malva-700">
+              atacado {formatBRL(product.wholesale_price_cents)}
+            </span>
+          )}
           {product.stock === null ? (
             <span className="text-[12px] text-muted-foreground">estoque livre</span>
           ) : (

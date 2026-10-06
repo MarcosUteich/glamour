@@ -1,4 +1,4 @@
-import { PRODUCT_COLUMNS, toProduct, type ProductRow } from '@/data/api'
+import { fetchWholesaleDiscountPct, PRODUCT_COLUMNS, toProduct, type ProductRow } from '@/data/api'
 import type { Attribution } from '@/lib/attribution'
 import { processProductImage } from '@/lib/images'
 import { requireSupabase } from '@/lib/supabase'
@@ -63,16 +63,22 @@ export async function fetchAllCategories(): Promise<Category[]> {
 
 export async function fetchAllProducts(): Promise<Product[]> {
   const supabase = requireSupabase()
-  const { data, error } = await supabase.from('products').select(PRODUCT_COLUMNS).order('created_at', { ascending: false })
+  const [{ data, error }, discountPct] = await Promise.all([
+    supabase.from('products').select(PRODUCT_COLUMNS).order('created_at', { ascending: false }),
+    fetchWholesaleDiscountPct(),
+  ])
   if (error) throw error
-  return (data as unknown as ProductRow[]).map(toProduct)
+  return (data as unknown as ProductRow[]).map((row) => toProduct(row, discountPct))
 }
 
 export async function fetchProduct(id: string): Promise<Product | null> {
   const supabase = requireSupabase()
-  const { data, error } = await supabase.from('products').select(PRODUCT_COLUMNS).eq('id', id).maybeSingle()
+  const [{ data, error }, discountPct] = await Promise.all([
+    supabase.from('products').select(PRODUCT_COLUMNS).eq('id', id).maybeSingle(),
+    fetchWholesaleDiscountPct(),
+  ])
   if (error) throw error
-  return data ? toProduct(data as unknown as ProductRow) : null
+  return data ? toProduct(data as unknown as ProductRow, discountPct) : null
 }
 
 export interface ProductInput {

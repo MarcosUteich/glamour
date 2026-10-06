@@ -145,7 +145,7 @@ verificação; o código extrai o `content`.
 2. Em `/admin` → Config → **Perguntas frequentes**, acrescente o que só a loja pode responder: formas de
    pagamento, troca e garantia, nota fiscal, se precisa de CNPJ, envio para outras cidades. Os marcadores
    `{pedido_minimo}`, `{retirada}`, `{horario}` e `{whatsapp}` acompanham as configurações.
-3. Em `/admin` → Config, confira: **pedido mínimo** (o código usa R$ 499,00; o painel estava com R$ 490,00),
+3. Em `/admin` → Config, confira: **pedido mínimo** (o código usa R$ 499,00; o painel estava com R$ 799,90),
    texto de retirada com "Loja 160", horário com acentos e o link do Instagram.
 4. Plano: o Free pausa o projeto após 1 semana sem uso (o servidor Node faz um acesso a cada 12 horas para evitar)
    e inclui 5 GB de tráfego por mês. Com anúncios rodando, passe para o **Pro** (US$ 25/mês).
@@ -195,7 +195,9 @@ campanha separada para o atacado. Duas formas de contar o pedido como conversão
 3. **Catálogo:** no Gerenciador de Commerce, crie um catálogo de *E-commerce*, vá em *Fontes de dados → Feed
    de dados → Feed programado* e informe `https://glamourlindoia.com.br/catalogo.xml`, com atualização diária.
    O `id` de cada item é o código da peça, o mesmo que o Pixel envia: assim a Meta liga a visita ao produto e
-   libera os anúncios de catálogo (mostram a peça que a pessoa viu).
+   libera os anúncios de catálogo (mostram a peça que a pessoa viu). Com desconto de atacado em `/admin` → Config,
+   o preço original vai em `price` e o de atacado em `sale_price` (o anúncio mostra o original riscado), igual às
+   tags da página da peça e ao `StrikethroughPrice` dos dados estruturados do Google.
 4. **Instagram:** com o Instagram profissional ligado ao portfólio, o catálogo aprovado e o domínio verificado,
    ative a marcação de produtos (*Instagram → Configurações → Compras*).
 5. Para testar, use a extensão *Meta Pixel Helper* do Chrome (depois de aceitar os cookies no site).

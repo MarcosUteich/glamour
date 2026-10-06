@@ -7,6 +7,7 @@ import { track } from '@/lib/analytics'
 import { isNewProduct, isSoldOut, productSubtitle } from '@/lib/catalog'
 import { formatBRL } from '@/lib/money'
 import type { Product } from '@/lib/types'
+import { hasWholesaleDiscount } from '@/seo/pricing'
 import { useCart, useCartLine } from '@/store/cart'
 import { maxQuantityFor } from '@/store/cart-logic'
 import { ProductImage } from './ProductImage'
@@ -30,6 +31,7 @@ export function ProductCard({
   const setQuantity = useCart((s) => s.setQuantity)
   const soldOut = isSoldOut(product)
   const lowStock = product.stock !== null && product.stock > 0 && product.stock <= 5
+  const discounted = hasWholesaleDiscount(product)
   const href = `/produto/${product.slug}`
 
   const handleAdd = () => {
@@ -70,7 +72,19 @@ export function ProductCard({
           <Link to={href}>{product.name}</Link>
         </Heading>
         <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{productSubtitle(product)}</p>
-        <p className="mt-1.5 text-base font-bold tabular-nums text-malva-800">{formatBRL(product.price_cents)}</p>
+        {/* Preço de atacado em destaque; com desconto, o original riscado ao lado */}
+        <p className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 tabular-nums">
+          <span className="text-base font-bold text-malva-800">
+            {discounted && <span className="sr-only">Preço de atacado: </span>}
+            {formatBRL(product.wholesale_price_cents)}
+          </span>
+          {discounted && (
+            <s className="text-[12px] text-muted-foreground">
+              <span className="sr-only">Preço original: </span>
+              {formatBRL(product.price_cents)}
+            </s>
+          )}
+        </p>
         {lowStock && <p className="text-[11.5px] font-medium text-malva-600">Últimas {product.stock} unidades</p>}
 
         <div className="mt-auto pt-2.5">

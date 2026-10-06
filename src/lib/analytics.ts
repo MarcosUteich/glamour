@@ -37,7 +37,9 @@ export interface TrackOptions {
 function itemsOf(options: TrackOptions): TrackedItem[] {
   if (options.product) {
     const p = options.product
-    return [{ code: p.code, name: p.name, priceCents: p.price_cents, quantity: options.quantity ?? 1, category: options.category }]
+    // Preço de atacado: o que a cliente paga (o mesmo valor do pedido)
+    const priceCents = p.wholesale_price_cents
+    return [{ code: p.code, name: p.name, priceCents, quantity: options.quantity ?? 1, category: options.category }]
   }
   return (options.lines ?? []).map((l) => ({ code: l.code, name: l.name, priceCents: l.priceCents, quantity: l.quantity }))
 }

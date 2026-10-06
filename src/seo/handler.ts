@@ -22,6 +22,7 @@ import {
   type SiteVerification,
 } from './head'
 import { injectHead } from './html'
+import { normalizeDiscountPct, withWholesalePrice } from './pricing'
 import { canonicalPath, resolveRoute, type SeoRoute } from './routes'
 import { buildRobots, buildSitemap, type SitemapCategory } from './sitemap'
 import { normalizeSiteUrl, publicPhotoUrl } from './url'
@@ -88,14 +89,15 @@ function photosOf(env: SeoEnv, images: ImageRow[] | null) {
   }
 }
 
-interface ProductRow extends Omit<SeoProduct, 'images' | 'shareImage' | 'category'> {
+interface ProductRow extends Omit<SeoProduct, 'images' | 'shareImage' | 'category' | 'wholesale_price_cents'> {
   categories: { name: string; slug: string } | null
   product_images: ImageRow[] | null
 }
 
 const PRODUCT_FIELDS = 'name,slug,code,description,material,plating,size,shade,price_cents,stock'
 
-async function loadProduct(deps: SeoDeps, slug: string): Promise<SeoProduct> {
+/** A peça como está no banco; o preço de atacado entra depois, com o desconto de Config. */
+async function loadProduct(deps: SeoDeps, slug: string): Promise<Omit<SeoProduct, 'wholesale_price_cents'>> {
   const select = `${PRODUCT_FIELDS},categories(name,slug),product_images(*)`
   const rows = await rest<ProductRow[]>(
     deps,
@@ -143,6 +145,8 @@ async function listCover(deps: SeoDeps, categoryId: string | null): Promise<{ em
 /** Configurações da loja (/admin → Config); se o banco falhar, os dados fixos de business.ts. */
 export interface StoreSettings {
   minOrderCents: number
+  /** Desconto do atacado sobre o preço original, em % (migration 0009; antes dela, 0) */
+  wholesaleDiscountPct: number
   pickupText: string
   hoursText: string | null
   whatsappNumber: string
@@ -153,35 +157,43 @@ export interface StoreSettings {
 
 const FALLBACK_SETTINGS: StoreSettings = {
   minOrderCents: BUSINESS.minOrderCents,
+  wholesaleDiscountPct: 0,
   pickupText: PICKUP_TEXT,
   hoursText: HOURS_TEXT,
   whatsappNumber: BUSINESS.phone.replace(/\D/g, ''),
   faq: null,
 }
 
+/** Configurações como estão no banco; erro se o banco falhar. */
+async function readSettings(deps: SeoDeps, timeoutMs?: number): Promise<StoreSettings> {
+  // select=* funciona antes e depois das migrations 0008 (coluna faq) e 0009 (coluna wholesale_discount_pct)
+  const rows = await rest<
+    Array<{
+      min_order_cents: number
+      wholesale_discount_pct?: number
+      pickup_text: string
+      hours_text: string | null
+      whatsapp_number: string
+      faq?: unknown
+      updated_at?: string
+    }>
+  >(deps, 'settings?select=*&id=eq.1', timeoutMs)
+  const row = rows[0]
+  if (!row) return FALLBACK_SETTINGS
+  return {
+    minOrderCents: row.min_order_cents ?? BUSINESS.minOrderCents,
+    wholesaleDiscountPct: normalizeDiscountPct(row.wholesale_discount_pct),
+    pickupText: row.pickup_text || PICKUP_TEXT,
+    hoursText: row.hours_text ?? null,
+    whatsappNumber: row.whatsapp_number || FALLBACK_SETTINGS.whatsappNumber,
+    faq: row.faq ?? null,
+    updatedAt: row.updated_at,
+  }
+}
+
 export async function loadSettings(deps: SeoDeps): Promise<StoreSettings> {
   try {
-    // select=* funciona antes e depois da migration 0008 (coluna faq)
-    const rows = await rest<
-      Array<{
-        min_order_cents: number
-        pickup_text: string
-        hours_text: string | null
-        whatsapp_number: string
-        faq?: unknown
-        updated_at?: string
-      }>
-    >(deps, 'settings?select=*&id=eq.1')
-    const row = rows[0]
-    if (!row) return FALLBACK_SETTINGS
-    return {
-      minOrderCents: row.min_order_cents ?? BUSINESS.minOrderCents,
-      pickupText: row.pickup_text || PICKUP_TEXT,
-      hoursText: row.hours_text ?? null,
-      whatsappNumber: row.whatsapp_number || FALLBACK_SETTINGS.whatsappNumber,
-      faq: row.faq ?? null,
-      updatedAt: row.updated_at,
-    }
+    return await readSettings(deps)
   } catch {
     return FALLBACK_SETTINGS
   }
@@ -219,8 +231,9 @@ async function headFor(route: SeoRoute, hasSearch: boolean, deps: SeoDeps): Prom
         return { head: searchable(categoryHead(siteUrl, category, minOrder, empty, cover)), status: 200 }
       }
       case 'product': {
-        const [product, minOrder] = await Promise.all([loadProduct(deps, route.slug), loadMinOrder(deps)])
-        return { head: productHead(siteUrl, product, minOrder), status: 200 }
+        const [product, settings] = await Promise.all([loadProduct(deps, route.slug), loadSettings(deps)])
+        const priced = withWholesalePrice(product, settings.wholesaleDiscountPct)
+        return { head: productHead(siteUrl, priced, settings.minOrderCents), status: 200 }
       }
     }
   } catch (error) {
@@ -326,28 +339,34 @@ export function handleRobotsRequest(deps: Pick<SeoDeps, 'env'>): Response {
   })
 }
 
-interface FeedRow extends Omit<FeedProduct, 'images' | 'shareImage' | 'category'> {
+interface FeedRow extends Omit<FeedProduct, 'images' | 'shareImage' | 'category' | 'wholesale_price_cents'> {
   categories: { name: string; slug: string } | null
   product_images: ImageRow[] | null
 }
 
 /**
  * /catalogo.xml: as peças ativas para o Gerenciador de Commerce da Meta (e o Merchant Center, se um dia usar).
- * Se o Supabase falhar, responde 503 e a Meta tenta de novo: um catálogo vazio apagaria os produtos de lá.
+ * Se o Supabase falhar, responde 503 e a Meta tenta de novo: um catálogo vazio apagaria os produtos de lá (e,
+ * sem o desconto de Config, os preços sairiam errados).
  */
 export async function handleFeedRequest(deps: SeoDeps): Promise<Response> {
   try {
     const select = `${PRODUCT_FIELDS},categories(name,slug),product_images(*)`
-    const rows = await rest<FeedRow[]>(
-      deps,
-      `products?select=${encodeURIComponent(select)}&active=eq.true&order=updated_at.desc&limit=5000`,
-      deps.timeoutMs ?? 10_000,
+    const timeoutMs = deps.timeoutMs ?? 10_000
+    const [rows, settings] = await Promise.all([
+      rest<FeedRow[]>(
+        deps,
+        `products?select=${encodeURIComponent(select)}&active=eq.true&order=updated_at.desc&limit=5000`,
+        timeoutMs,
+      ),
+      readSettings(deps, timeoutMs),
+    ])
+    const products: FeedProduct[] = rows.map(({ categories, product_images, ...fields }) =>
+      withWholesalePrice(
+        { ...fields, ...photosOf(deps.env, product_images), category: categories },
+        settings.wholesaleDiscountPct,
+      ),
     )
-    const products: FeedProduct[] = rows.map(({ categories, product_images, ...fields }) => ({
-      ...fields,
-      ...photosOf(deps.env, product_images),
-      category: categories,
-    }))
     return new Response(buildFeed(deps.env.siteUrl, products), {
       headers: {
         'content-type': 'application/xml; charset=utf-8',

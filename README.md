@@ -4,6 +4,11 @@ Catálogo de atacado da **Glamour Lindóia** (Lindóia Shopping, loja 160, Porto
 de no mínimo **R$ 499** (valor definido em `/admin` → Config) e envia pelo **WhatsApp** da loja; a retirada é
 na loja.
 
+Preços: cada peça é cadastrada com o **preço original**; o **preço de atacado** é esse preço com o desconto definido
+em `/admin` → Config (igual para todas as peças). O card e a página da peça mostram o de atacado em destaque e o
+original riscado; o pedido é cobrado pelo de atacado, calculado no banco (`0009_desconto_atacado.sql`, mesma conta
+de `src/seo/pricing.ts`). Com desconto 0%, o site mostra um preço só.
+
 Fluxo: catálogo → carrinho → pedido ≥ mínimo → nome + WhatsApp → mensagem pronta no WhatsApp.
 
 ## Stack
@@ -39,7 +44,7 @@ Sem as chaves do Supabase o site roda em **modo demonstração** com produtos de
 ## Supabase
 
 Aplique na ordem, pelo SQL editor do projeto: `supabase/migrations/0001_schema.sql` a
-`0008_como_comprar.sql` e depois `supabase/seed.sql` (ou `supabase/sample-data.sql` para ter peças de exemplo).
+`0009_desconto_atacado.sql` e depois `supabase/seed.sql` (ou `supabase/sample-data.sql` para ter peças de exemplo).
 Crie o usuário admin em Authentication e insira o `user_id` dele em `public.admins`.
 
 ## Deploy

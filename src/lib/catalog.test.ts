@@ -26,6 +26,7 @@ const prod = (id: string, category: string, name: string, extra: Partial<Product
   shade: null,
   weight_g: null,
   price_cents: 1000,
+  wholesale_price_cents: 1000,
   stock: null,
   active: true,
   created_at: '2020-01-01T00:00:00Z',

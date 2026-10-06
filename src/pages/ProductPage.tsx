@@ -17,6 +17,7 @@ import { formatBRL } from '@/lib/money'
 import { categoryArt } from '@/lib/placeholders'
 import type { ProductPhoto } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { hasWholesaleDiscount } from '@/seo/pricing'
 import { useCart, useCartLine } from '@/store/cart'
 import { maxQuantityFor } from '@/store/cart-logic'
 import { productDescription } from '@/seo/head'
@@ -52,6 +53,7 @@ export function ProductPage() {
   }
 
   const soldOut = isSoldOut(product)
+  const discounted = hasWholesaleDiscount(product)
   const inCart = line?.quantity ?? 0
   const room = Math.max(maxQuantityFor(product.stock) - inCart, 0)
   const fallback = categoryArt(category?.slug)
@@ -110,7 +112,18 @@ export function ProductPage() {
           {isNewProduct(product.created_at) && <Badge variant="gold">Novidade</Badge>}
           <h1 className="mt-2 text-2xl font-semibold leading-tight text-tinta sm:text-3xl">{product.name}</h1>
           <p className="mt-1 text-sm text-muted-foreground">Código {product.code}</p>
-          <p className="mt-4 text-3xl font-bold tabular-nums text-malva-800">{formatBRL(product.price_cents)}</p>
+          <p className="mt-4 flex flex-wrap items-baseline gap-x-3 tabular-nums">
+            <span className="text-3xl font-bold text-malva-800">
+              {discounted && <span className="sr-only">Preço de atacado: </span>}
+              {formatBRL(product.wholesale_price_cents)}
+            </span>
+            {discounted && (
+              <s className="text-base text-muted-foreground">
+                <span className="sr-only">Preço original: </span>
+                {formatBRL(product.price_cents)}
+              </s>
+            )}
+          </p>
           <p className="text-xs text-muted-foreground">Preço de atacado, por unidade</p>
           <Availability stock={product.stock} />
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Product } from '@/lib/types'
+import { withWholesalePrice } from '@/seo/pricing'
 import { addToLines, cartTotals, setLineQuantity, syncLines, type CartLine } from './cart-logic'
 
 const product = (id: string, price: number, extra: Partial<Product> = {}): Product => ({
@@ -15,6 +16,7 @@ const product = (id: string, price: number, extra: Partial<Product> = {}): Produ
   shade: null,
   weight_g: null,
   price_cents: price,
+  wholesale_price_cents: price,
   stock: null,
   active: true,
   created_at: '2026-01-01T00:00:00Z',
@@ -76,5 +78,20 @@ describe('syncLines', () => {
   it('devolve a mesma lista quando nada mudou', () => {
     const lines = addToLines([], product('j', 1000)).lines
     expect(syncLines(lines, [product('j', 1000)]).lines).toBe(lines)
+  })
+})
+
+describe('preço de atacado', () => {
+  it('o pedido soma o preço de atacado, não o original', () => {
+    const lines = addToLines([], withWholesalePrice(product('k', 10000), 30), 2).lines
+    expect(lines[0].priceCents).toBe(7000)
+    expect(cartTotals(lines).totalCents).toBe(14000)
+  })
+
+  it('pedido salvo antes do desconto passa para o preço de atacado e avisa', () => {
+    const lines = addToLines([], product('l', 10000)).lines
+    const { lines: next, changes } = syncLines(lines, [withWholesalePrice(product('l', 10000), 30)])
+    expect(next[0].priceCents).toBe(7000)
+    expect(changes).toEqual(['Peça l: preço atualizado'])
   })
 })

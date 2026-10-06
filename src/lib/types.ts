@@ -29,7 +29,10 @@ export interface Product {
   size: string | null
   shade: string | null
   weight_g: number | null
+  /** Preço original da peça, como cadastrado no painel */
   price_cents: number
+  /** Preço de atacado (o cobrado): price_cents com o desconto de /admin → Config. Ver seo/pricing.ts */
+  wholesale_price_cents: number
   /** null = a loja não controla estoque desta peça */
   stock: number | null
   active: boolean
@@ -39,7 +42,10 @@ export interface Product {
 
 export interface Settings {
   whatsapp_number: string
+  /** Pedido mínimo, somando os preços de atacado */
   min_order_cents: number
+  /** Desconto do atacado sobre o preço original, em % (migration 0009); ausente = banco ainda sem a coluna */
+  wholesale_discount_pct?: number
   pickup_text: string
   hours_text: string | null
   instagram_url: string | null

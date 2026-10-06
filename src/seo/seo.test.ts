@@ -213,7 +213,7 @@ describe('página de produto', () => {
     )
     expect(html).toContain('"price":"24.90"')
     expect(html).toContain('OutOfStock')
-    expect(html).toContain('"minPrice":"490.00"')
+    expect(html).toContain('"minPrice":"799.90"')
     expect(html).toContain('"@type":"BreadcrumbList"')
     expect(html).not.toContain('<title>Glamour Lindóia Atacado</title>')
     expect(html).toContain('<!-- seo:end -->')
@@ -236,6 +236,33 @@ describe('página de produto', () => {
     expect(html).toContain(
       '<link rel="preload" as="image" href="https://db.test/storage/v1/object/public/product-images/p1/b1-lg.webp" fetchpriority="high" />',
     )
+  })
+
+  it('sem desconto de atacado, um preço só', async () => {
+    const { fetch } = fakeFetch({ '/rest/v1/products': [PRODUCT_ROW], '/rest/v1/settings': [{ wholesale_discount_pct: 0 }] })
+    const html = await (await handlePageRequest(request('/produto/brinco-argola-lisa-br-101'), { env, fetch })).text()
+    expect(html).toContain('<meta property="product:price:amount" content="24.90" />')
+    expect(html).not.toContain('sale_price')
+    expect(html).not.toContain('StrikethroughPrice')
+  })
+
+  it('com desconto de atacado, cobra o de atacado e mostra o original riscado', async () => {
+    const { fetch } = fakeFetch({
+      '/rest/v1/products': [PRODUCT_ROW],
+      '/rest/v1/settings': [{ min_order_cents: 49000, wholesale_discount_pct: 30 }],
+    })
+    const html = await (await handlePageRequest(request('/produto/brinco-argola-lisa-br-101'), { env, fetch })).text()
+    // 24,90 com 30% = 17,43
+    expect(html).toContain('<title>Brinco argola lisa BR-101 · R$ 17,43 no atacado | Glamour Lindóia</title>')
+    expect(html).toContain('por R$ 17,43 no atacado')
+    expect(html).toContain('"price":"17.43"')
+    expect(html).toContain(
+      '"priceSpecification":{"@type":"UnitPriceSpecification","priceType":"https://schema.org/StrikethroughPrice","price":"24.90","priceCurrency":"BRL"}',
+    )
+    // Meta: igual ao catalogo.xml (original em price, atacado em sale_price)
+    expect(html).toContain('<meta property="product:price:amount" content="24.90" />')
+    expect(html).toContain('<meta property="product:sale_price:amount" content="17.43" />')
+    expect(html).toContain('<meta property="product:sale_price:currency" content="BRL" />')
   })
 
   it('peça sem estoque sai como "out of stock" para a Meta', async () => {
@@ -471,6 +498,26 @@ describe('catálogo para a Meta (catalogo.xml)', () => {
     expect(xml).toContain(`<g:brand>${BUSINESS.name}</g:brand>`)
     expect(xml).toContain('<g:google_product_category>Apparel &amp; Accessories &gt; Jewelry</g:google_product_category>')
     expect(xml).not.toContain('SEM-FOTO')
+  })
+
+  it('com desconto de atacado, manda o original em price e o de atacado em sale_price', async () => {
+    const { fetch } = fakeFetch({ '/rest/v1/products': [WITH_SHARE], '/rest/v1/settings': [{ wholesale_discount_pct: 30 }] })
+    const xml = await (await handleFeedRequest({ env, fetch })).text()
+    expect(xml).toContain('<g:price>24.90 BRL</g:price>')
+    expect(xml).toContain('<g:sale_price>17.43 BRL</g:sale_price>')
+  })
+
+  it('sem desconto, sem sale_price', async () => {
+    const { fetch } = fakeFetch({ '/rest/v1/products': [WITH_SHARE], '/rest/v1/settings': [{ wholesale_discount_pct: 0 }] })
+    expect(await (await handleFeedRequest({ env, fetch })).text()).not.toContain('sale_price')
+  })
+
+  it('sem conseguir ler o desconto responde 503 (preço errado não vai para a Meta)', async () => {
+    const { fetch } = fakeFetch({
+      '/rest/v1/products': [WITH_SHARE],
+      '/rest/v1/settings': () => new Response('erro', { status: 500 }),
+    })
+    expect((await handleFeedRequest({ env, fetch })).status).toBe(503)
   })
 
   it('se o banco falhar responde 503, nunca um catálogo vazio', async () => {

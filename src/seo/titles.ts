@@ -18,8 +18,8 @@ export const titles = {
   home: () => `Semijoias no atacado em Porto Alegre | ${BRAND}`,
   novidades: () => `Novidades no atacado em Porto Alegre | ${BRAND}`,
   category: (name: string) => `${name} no atacado em Porto Alegre | ${BRAND}`,
-  product: (p: { name: string; code: string; price_cents: number }) =>
-    `${p.name} ${p.code} · ${brl(p.price_cents)} no atacado | ${BRAND}`,
+  product: (p: { name: string; code: string; wholesale_price_cents: number }) =>
+    `${p.name} ${p.code} · ${brl(p.wholesale_price_cents)} no atacado | ${BRAND}`,
   howToBuy: () => `Como comprar no atacado | ${BRAND}`,
   /** Páginas de serviço: "Seu pedido · Glamour Lindóia Atacado" */
   page: (label: string) => `${label} · ${SITE_NAME}`,

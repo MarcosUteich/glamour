@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { centsToInput, parseBRLToCents } from '@/lib/money'
+import { fetchSettings } from '@/data/api'
+import { centsToInput, formatBRL, parseBRLToCents } from '@/lib/money'
 import { maskProductPrice, maskProductSize, maskProductWeight } from '@/lib/product-masks'
 import { slugify } from '@/lib/slug'
 import type { Product } from '@/lib/types'
+import { wholesalePriceCents } from '@/seo/pricing'
 import { fetchAllCategories, fetchProduct, suggestCode, type ProductInput } from './api'
 import { PhotoUploader } from './PhotoUploader'
 import { PhotoUploadError, saveProductWithPhotos, type PendingPhoto } from './product-save'
@@ -81,6 +83,8 @@ function ProductForm() {
   const editing = !!id
 
   const { data: categories = [] } = useQuery({ queryKey: ['admin-categories'], queryFn: fetchAllCategories })
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: fetchSettings })
+  const discountPct = settings?.wholesale_discount_pct ?? 0
   const { data: product } = useQuery({
     queryKey: ['admin-product', id ?? duplicateOf],
     queryFn: () => fetchProduct((id ?? duplicateOf)!),
@@ -115,6 +119,11 @@ function ProductForm() {
   if (draft.name.trim().length < 2) errors.name = 'Informe o nome'
   if (!draft.code.trim()) errors.code = 'Informe o código'
   if (priceCents === null || priceCents <= 0) errors.price = 'Preço inválido'
+  // O que a cliente paga: o preço original com o desconto de Config
+  const wholesaleHint =
+    priceCents && priceCents > 0 && discountPct > 0
+      ? `Atacado: ${formatBRL(wholesalePriceCents(priceCents, discountPct))} (−${discountPct}%)`
+      : undefined
   if (draft.controlsStock && !/^\d+$/.test(draft.stock.trim())) errors.stock = 'Quantidade inválida'
   if (draft.weight && (!/^\d{1,6}(,\d{0,2})?$/.test(draft.weight) || Number(draft.weight.replace(',', '.')) <= 0)) {
     errors.weight = 'Informe um peso maior que zero'
@@ -222,7 +231,7 @@ function ProductForm() {
             <Field label="Código" error={errors.code}>
               <Input value={draft.code} onChange={(e) => set('code', e.target.value.toUpperCase())} placeholder="BR-102" />
             </Field>
-            <Field label="Preço de atacado (R$)" error={errors.price}>
+            <Field label="Preço original (R$)" error={errors.price} hint={wholesaleHint}>
               <Input
                 inputMode="decimal"
                 value={draft.price}
@@ -329,12 +338,26 @@ function ProductForm() {
   )
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  error,
+  hint,
+  children,
+}: {
+  label: string
+  error?: string
+  hint?: string
+  children: React.ReactNode
+}) {
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
       {children}
-      {error && <p className="text-[12px] text-destructive">{error}</p>}
+      {error ? (
+        <p className="text-[12px] text-destructive">{error}</p>
+      ) : (
+        hint && <p className="text-[12px] font-medium tabular-nums text-malva-700">{hint}</p>
+      )}
     </div>
   )
 }

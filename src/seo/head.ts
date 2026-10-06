@@ -3,6 +3,7 @@
 import { BUSINESS, type Business } from './business'
 import { faqJsonLd, type FaqItem } from './faq'
 import { escapeHtml, jsonLdScript, truncate } from './html'
+import { hasWholesaleDiscount } from './pricing'
 import { brl, reais, SITE_NAME, titles } from './titles'
 
 export interface SiteVerification {
@@ -38,7 +39,10 @@ export interface HeadData {
   imageAlt: string
   imageSize?: { width: number; height: number }
   imageType?: string
+  /** Preço cobrado (o de atacado) */
   priceCents?: number
+  /** Preço original, quando há desconto de atacado: vai como price e o de atacado como sale_price (igual ao catalogo.xml) */
+  originalPriceCents?: number
   /** Tags de produto da Meta (catálogo e anúncios dinâmicos): código igual ao do catálogo e do Pixel */
   product?: { retailerId: string; inStock: boolean }
   /** Foto principal da página: o navegador começa a baixar antes do JavaScript (LCP no celular) */
@@ -70,7 +74,10 @@ export interface SeoProduct {
   plating: string | null
   size: string | null
   shade: string | null
+  /** Preço original */
   price_cents: number
+  /** Preço de atacado (o cobrado), com o desconto de /admin → Config */
+  wholesale_price_cents: number
   stock: number | null
   /** URLs absolutas das fotos grandes (WebP), a capa primeiro */
   images: string[]
@@ -168,13 +175,13 @@ export function breadcrumbJsonLd(items: Array<{ name: string; url: string }>) {
 }
 
 export function productDescription(
-  product: Pick<SeoProduct, 'name' | 'code' | 'description' | 'size' | 'plating' | 'shade' | 'price_cents'>,
+  product: Pick<SeoProduct, 'name' | 'code' | 'description' | 'size' | 'plating' | 'shade' | 'wholesale_price_cents'>,
   minOrderCents: number,
 ): string {
   if (product.description?.trim()) return truncate(product.description)
   const details = [product.size, product.plating, product.shade && `tom ${product.shade}`].filter(Boolean).join(', ')
   return truncate(
-    `${product.name} (${product.code})${details ? `, ${details}` : ''}, por ${brl(product.price_cents)} no atacado. ` +
+    `${product.name} (${product.code})${details ? `, ${details}` : ''}, por ${brl(product.wholesale_price_cents)} no atacado. ` +
       `Pedido mínimo de ${brl(minOrderCents)}, envio pelo WhatsApp e ${PICKUP}.`,
   )
 }
@@ -196,7 +203,18 @@ export function productJsonLd(siteUrl: string, product: SeoProduct, minOrderCent
       '@type': 'Offer',
       url: `${siteUrl}/produto/${product.slug}`,
       priceCurrency: 'BRL',
-      price: reais(product.price_cents),
+      price: reais(product.wholesale_price_cents),
+      // Preço original riscado ao lado do de atacado (Google: preço "de/por")
+      ...(hasWholesaleDiscount(product)
+        ? {
+            priceSpecification: {
+              '@type': 'UnitPriceSpecification',
+              priceType: 'https://schema.org/StrikethroughPrice',
+              price: reais(product.price_cents),
+              priceCurrency: 'BRL',
+            },
+          }
+        : {}),
       availability: product.stock === 0 ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
       itemCondition: 'https://schema.org/NewCondition',
       seller: { '@type': 'Organization', '@id': `${siteUrl}/#loja`, name: business.name },
@@ -292,7 +310,8 @@ export function productHead(siteUrl: string, product: SeoProduct, minOrderCents:
     robots: INDEX,
     ogType: 'product',
     ...image,
-    priceCents: product.price_cents,
+    priceCents: product.wholesale_price_cents,
+    ...(hasWholesaleDiscount(product) ? { originalPriceCents: product.price_cents } : {}),
     product: { retailerId: product.code, inStock: product.stock !== 0 },
     // A foto grande que a página mostra primeiro (a mesma URL que o site usa)
     preloadImage: product.images[0],
@@ -356,6 +375,22 @@ export function withSearch(head: HeadData): HeadData {
   return { ...head, robots: NOINDEX, jsonLd: [] }
 }
 
+/** Preço para a Meta: sem desconto, só price; com desconto, price = original e sale_price = atacado. */
+function priceTags(head: HeadData): string[] {
+  if (head.priceCents === undefined) return []
+  const regular = head.originalPriceCents ?? head.priceCents
+  return [
+    `<meta property="product:price:amount" content="${reais(regular)}" />`,
+    '<meta property="product:price:currency" content="BRL" />',
+    ...(head.originalPriceCents !== undefined
+      ? [
+          `<meta property="product:sale_price:amount" content="${reais(head.priceCents)}" />`,
+          '<meta property="product:sale_price:currency" content="BRL" />',
+        ]
+      : []),
+  ]
+}
+
 export function renderHead(head: HeadData): string {
   const title = escapeHtml(head.title)
   const description = escapeHtml(head.description)
@@ -380,8 +415,7 @@ export function renderHead(head: HeadData): string {
     head.imageSize && `<meta property="og:image:width" content="${head.imageSize.width}" />`,
     head.imageSize && `<meta property="og:image:height" content="${head.imageSize.height}" />`,
     `<meta property="og:image:alt" content="${escapeHtml(head.imageAlt)}" />`,
-    head.priceCents !== undefined && `<meta property="product:price:amount" content="${reais(head.priceCents)}" />`,
-    head.priceCents !== undefined && '<meta property="product:price:currency" content="BRL" />',
+    ...priceTags(head),
     head.product && `<meta property="product:retailer_item_id" content="${escapeHtml(head.product.retailerId)}" />`,
     head.product && `<meta property="product:availability" content="${head.product.inStock ? 'in stock' : 'out of stock'}" />`,
     head.product && '<meta property="product:condition" content="new" />',
