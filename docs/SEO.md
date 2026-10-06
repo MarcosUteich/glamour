@@ -145,7 +145,7 @@ verificação; o código extrai o `content`.
 2. Em `/admin` → Config → **Perguntas frequentes**, acrescente o que só a loja pode responder: formas de
    pagamento, troca e garantia, nota fiscal, se precisa de CNPJ, envio para outras cidades. Os marcadores
    `{pedido_minimo}`, `{retirada}`, `{horario}` e `{whatsapp}` acompanham as configurações.
-3. Em `/admin` → Config, confira: **pedido mínimo** (o código usa R$ 499,00; o painel estava com R$ 799,90),
+3. Em `/admin` → Config, confira: **pedido mínimo** (R$ 799,90; o código usa o mesmo valor quando o banco não responde),
    texto de retirada com "Loja 160", horário com acentos e o link do Instagram.
 4. Plano: o Free pausa o projeto após 1 semana sem uso (o servidor Node faz um acesso a cada 12 horas para evitar)
    e inclui 5 GB de tráfego por mês. Com anúncios rodando, passe para o **Pro** (US$ 25/mês).

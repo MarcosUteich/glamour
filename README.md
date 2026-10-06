@@ -1,7 +1,7 @@
 # Glamour Lindóia Atacado
 
 Catálogo de atacado da **Glamour Lindóia** (Lindóia Shopping, loja 160, Porto Alegre). O cliente monta um pedido
-de no mínimo **R$ 499** (valor definido em `/admin` → Config) e envia pelo **WhatsApp** da loja; a retirada é
+de no mínimo **R$ 799,90** (valor definido em `/admin` → Config) e envia pelo **WhatsApp** da loja; a retirada é
 na loja.
 
 Preços: cada peça é cadastrada com o **preço original**; o **preço de atacado** é esse preço com o desconto definido

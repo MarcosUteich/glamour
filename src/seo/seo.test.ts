@@ -186,7 +186,7 @@ describe('home', () => {
     expect(html).toContain(BUSINESS.mapsUrl)
     expect(html).toContain('https://www.instagram.com/glamour_lindoia/')
     expect(html).toContain('"@type":"WebSite"')
-    expect(html).toContain('Pedido mínimo de R$ 499,00')
+    expect(html).toContain('Pedido mínimo de R$ 799,90')
     expect(html).toContain('"logo":{"@type":"ImageObject","url":"https://glamour.test/brand/logo.png","width":512,"height":512}')
     expect(html).toContain('<meta name="twitter:image:alt"')
   })
@@ -200,7 +200,7 @@ describe('home', () => {
 
 describe('página de produto', () => {
   it('traz título, Open Graph e Product com preço, estoque e pedido mínimo', async () => {
-    const { fetch } = fakeFetch({ '/rest/v1/products': [PRODUCT_ROW], '/rest/v1/settings': [{ min_order_cents: 49000 }] })
+    const { fetch } = fakeFetch({ '/rest/v1/products': [PRODUCT_ROW], '/rest/v1/settings': [{ min_order_cents: 79990 }] })
     const res = await handlePageRequest(request('/produto/brinco-argola-lisa-br-101'), { env, fetch })
     const html = await res.text()
 
@@ -399,7 +399,7 @@ describe('como comprar e perguntas frequentes', () => {
     const { fetch } = fakeFetch({ '/rest/v1/settings': () => new Response('erro', { status: 500 }) })
     const html = await (await handlePageRequest(request('/como-comprar'), { env, fetch })).text()
     expect(html).toContain('"@type":"FAQPage"')
-    expect(html).toContain('R$ 499,00')
+    expect(html).toContain('R$ 799,90')
   })
 
   it('lê o valor do banco com cuidado', () => {

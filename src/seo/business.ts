@@ -70,7 +70,7 @@ export const BUSINESS: Business = {
   openingHours: [
     { days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], opens: '10:00', closes: '21:00' },
   ],
-  minOrderCents: 49900,
+  minOrderCents: 79990,
 }
 
 export const PICKUP_TEXT = 'Glamour Lindóia · Lindóia Shopping · Loja 160 (térreo) · Av. Assis Brasil, 3522 · Porto Alegre/RS'

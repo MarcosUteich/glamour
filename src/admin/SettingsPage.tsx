@@ -86,7 +86,7 @@ export function SettingsPage() {
         </div>
         <div className="space-y-1.5">
           <Label>Pedido mínimo</Label>
-          <Input inputMode="decimal" value={form.min} onChange={(e) => setForm({ ...form, min: e.target.value })} placeholder="499,00" />
+          <Input inputMode="decimal" value={form.min} onChange={(e) => setForm({ ...form, min: e.target.value })} placeholder="799,90" />
           <p className="text-[12px] text-muted-foreground">Somando os preços de atacado das peças.</p>
         </div>
         <div className="space-y-1.5">

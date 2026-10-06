@@ -13,15 +13,25 @@ export function Hero({
   return (
     <section className="w-full overflow-hidden bg-[#f8e5e2]">
       {/* ───────── DESKTOP (≥1024px): banner completo ───────── */}
-      <img
-        src="/hero-desktop.jpg"
-        alt={`Semijoias para revender no atacado. Pedido mínimo de ${minOrder} e retirada na loja no Lindóia Shopping.`}
-        className="hidden h-auto w-full lg:block"
-        width={2000}
-        height={666}
-        loading="lazy"
-        decoding="async"
-      />
+      {/* A arte não traz o valor do pedido mínimo: ele entra por cima, vindo de /admin → Config, no lugar e no
+          tamanho exatos da arte (posição em % e fonte em cqw acompanham a largura da imagem) */}
+      <div className="@container relative hidden lg:block">
+        <img
+          src="/hero-desktop.jpg"
+          alt={`Semijoias para revender no atacado. Pedido mínimo de ${minOrder} e retirada na loja no Lindóia Shopping.`}
+          className="block h-auto w-full"
+          width={2000}
+          height={666}
+          loading="lazy"
+          decoding="async"
+        />
+        <span
+          aria-hidden="true"
+          className="absolute left-[10.6%] top-[81.83%] whitespace-nowrap text-[length:1.5125cqw] font-bold leading-none text-[#66394a]"
+        >
+          {minOrder}
+        </span>
+      </div>
 
       {/* ───────── MOBILE / TABLET (<1024px): foto + texto em HTML ───────── */}
       <div className="lg:hidden">
