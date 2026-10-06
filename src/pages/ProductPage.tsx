@@ -1,10 +1,9 @@
-import { ChevronRight } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ChevronLeft, ChevronRight, LoaderCircle } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { SectionTitle } from '@/components/brand/Ornaments'
 import { ProductGrid } from '@/components/catalog/ProductGrid'
-import { ProductImage } from '@/components/catalog/ProductImage'
 import { QtyStepper } from '@/components/catalog/QtyStepper'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -106,7 +105,7 @@ export function ProductPage() {
       </nav>
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-12">
-        <Gallery photos={product.photos} fallback={fallback} alt={product.name} />
+        <Gallery key={product.id} photos={product.photos} fallback={fallback} alt={product.name} />
 
         <div className="min-w-0">
           {isNewProduct(product.created_at) && <Badge variant="gold">Novidade</Badge>}
@@ -196,44 +195,99 @@ function Availability({ stock }: { stock: number | null }) {
 
 function Gallery({ photos, fallback, alt }: { photos: ProductPhoto[]; fallback: string; alt: string }) {
   const [index, setIndex] = useState(0)
+  const viewport = useRef<HTMLDivElement>(null)
   const list = photos.length > 0 ? photos : [{ sm: fallback, lg: fallback }]
+  const multiple = list.length > 1
+  const goTo = (next: number) => {
+    const el = viewport.current
+    if (!el) return
+    el.scrollTo({ left: Math.max(0, Math.min(next, list.length - 1)) * el.clientWidth, behavior: 'smooth' })
+  }
 
   return (
-    <div className="min-w-0">
-      <div
-        className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto rounded-3xl bg-malva-100"
-        onScroll={(e) => {
-          const el = e.currentTarget
-          setIndex(Math.round(el.scrollLeft / el.clientWidth))
-        }}
-      >
-        {list.map((photo, i) => (
-          <ProductImage
-            key={photo.lg}
-            src={photo.lg}
-            fallback={fallback}
-            alt={i === 0 ? alt : `${alt}, foto ${i + 1}`}
-            eager={i === 0}
-            className="aspect-square w-full shrink-0 snap-center object-cover"
-          />
-        ))}
-      </div>
-      {list.length > 1 && (
-        <div className="mt-3 flex justify-center gap-1.5" aria-hidden>
+    <div className="min-w-0" role="region" aria-label={`Fotos de ${alt}`}>
+      <div className="relative">
+        <div
+          ref={viewport}
+          tabIndex={multiple ? 0 : undefined}
+          aria-label="Galeria de fotos"
+          className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto rounded-3xl bg-malva-100"
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+              event.preventDefault()
+              goTo(index + (event.key === 'ArrowRight' ? 1 : -1))
+            }
+          }}
+          onScroll={(e) => {
+            const el = e.currentTarget
+            if (el.clientWidth) setIndex(Math.max(0, Math.min(list.length - 1, Math.round(el.scrollLeft / el.clientWidth))))
+          }}
+        >
           {list.map((photo, i) => (
-            <span
-              key={photo.lg}
-              className={cn('size-1.5 rounded-full transition-colors', i === index ? 'bg-malva-600' : 'bg-malva-200')}
-            />
+            <div key={`${photo.lg}-${i}`} className="relative aspect-square w-full min-w-0 flex-none snap-center snap-always">
+              <GalleryPhoto src={photo.lg} fallback={fallback} alt={`${alt}, foto ${i + 1}`} eager={i === 0} />
+            </div>
           ))}
+      </div>
+      {multiple && (
+        <>
+          <button type="button" aria-label="Foto anterior" disabled={index === 0} onClick={() => goTo(index - 1)}
+            className="absolute left-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-malva-800 shadow-md transition-opacity hover:bg-white focus-visible:outline-2 focus-visible:outline-malva-500 disabled:pointer-events-none disabled:opacity-30">
+            <ChevronLeft className="size-5" aria-hidden />
+          </button>
+          <button type="button" aria-label="Próxima foto" disabled={index === list.length - 1} onClick={() => goTo(index + 1)}
+            className="absolute right-3 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-malva-800 shadow-md transition-opacity hover:bg-white focus-visible:outline-2 focus-visible:outline-malva-500 disabled:pointer-events-none disabled:opacity-30">
+            <ChevronRight className="size-5" aria-hidden />
+          </button>
+        </>
+      )}
+      </div>
+      {multiple && (
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
+          {list.map((photo, i) => (
+            <button key={`${photo.lg}-${i}`} type="button" aria-label={`Ver foto ${i + 1}`} aria-current={i === index ? 'true' : undefined}
+              onClick={() => goTo(i)} className="grid size-8 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-malva-500">
+              <span className={cn('size-2 rounded-full transition-colors', i === index ? 'bg-malva-600' : 'bg-malva-200')} />
+            </button>
+          ))}
+          <span className="ml-2 text-xs tabular-nums text-muted-foreground" aria-live="polite">{index + 1} / {list.length}</span>
         </div>
       )}
     </div>
   )
 }
 
+function GalleryPhoto({ src, fallback, alt, eager }: { src: string; fallback: string; alt: string; eager: boolean }) {
+  const [failed, setFailed] = useState(false)
+  const [unavailable, setUnavailable] = useState(false)
+  const [loaded, setLoaded] = useState<string | null>(null)
+  const current = failed ? fallback : src
+  const ready = loaded === current
+  const imageRef = useCallback((image: HTMLImageElement | null) => {
+    if (image?.complete && image.naturalWidth > 0) setLoaded(current)
+  }, [current])
+
+  return (
+    <>
+      {!ready && !unavailable && (
+        <div role="status" className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-malva-100 text-malva-600">
+          <LoaderCircle className="size-7 animate-spin" aria-hidden />
+          <span className="text-xs">Carregando foto...</span>
+        </div>
+      )}
+      {unavailable ? (
+        <div className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">Foto indisponível</div>
+      ) : (
+        <img ref={imageRef} src={current} alt={alt} loading={eager ? 'eager' : 'lazy'} fetchPriority={eager ? 'high' : undefined}
+          decoding="async" draggable={false} onLoad={() => setLoaded(current)}
+          onError={() => { if (current === fallback) setUnavailable(true); else setFailed(true) }}
+          className={cn('absolute inset-0 h-full w-full object-cover transition-opacity duration-300', ready ? 'opacity-100' : 'opacity-0')} />
+      )}
+    </>
+  )
+}
+
 function ProductSkeleton() {
-  // Altura mínima de uma tela: o rodapé não aparece e depois pula para baixo quando a peça carrega (CLS)
   return (
     <div className="mx-auto grid min-h-dvh max-w-6xl grid-cols-1 content-start gap-8 px-4 py-8 sm:px-6 md:grid-cols-2">
       <Skeleton className="aspect-square w-full rounded-3xl" />

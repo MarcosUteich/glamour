@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -21,11 +22,12 @@ export function ProductCard({
 }: {
   product: Product
   fallback: string
-  /** Nível do nome da peça na página: h2 sob o título da categoria, h3 sob uma seção, p fora de contexto */
   heading?: 'h2' | 'h3' | 'p'
-  /** Foto na primeira tela: carrega já, com prioridade (LCP) */
   eager?: boolean
 }) {
+  const [requestedPreview, setRequestedPreview] = useState<string | null>(null)
+  const [loadedPreview, setLoadedPreview] = useState<string | null>(null)
+  const preview = product.photos[1]?.sm
   const line = useCartLine(product.id)
   const add = useCart((s) => s.add)
   const setQuantity = useCart((s) => s.setQuantity)
@@ -46,15 +48,42 @@ export function ProductCard({
   }
 
   return (
-    <article className="group flex h-full flex-col">
+    <article
+      className="product-card group flex h-full flex-col"
+      onPointerEnter={(event) => {
+        if (preview && event.pointerType === 'mouse' && window.matchMedia('(hover: hover)').matches) {
+          setRequestedPreview(preview)
+        }
+      }}
+    >
       <Link to={href} className="relative block overflow-hidden rounded-2xl bg-malva-100">
         <ProductImage
           src={product.photos[0]?.sm}
           fallback={fallback}
           alt={product.name}
           eager={eager}
-          className="aspect-square w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          className="aspect-square w-full object-cover"
         />
+        {preview && requestedPreview === preview && (
+          <img
+            key={preview}
+            src={preview}
+            alt=""
+            aria-hidden="true"
+            data-ready={loadedPreview === preview}
+            decoding="async"
+            onLoad={(event) => {
+              const image = event.currentTarget
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  if (image.isConnected) setLoadedPreview(preview)
+                })
+              })
+            }}
+            onError={() => setLoadedPreview(null)}
+            className="product-card-preview pointer-events-none absolute inset-0 aspect-square h-full w-full object-cover"
+          />
+        )}
         {isNewProduct(product.created_at) && (
           <Badge variant="gold" className="absolute left-2 top-2">
             Novo
@@ -72,7 +101,6 @@ export function ProductCard({
           <Link to={href}>{product.name}</Link>
         </Heading>
         <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{productSubtitle(product)}</p>
-        {/* Preço de atacado em destaque; com desconto, o original riscado ao lado */}
         <p className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 tabular-nums">
           <span className="text-base font-bold text-malva-800">
             {discounted && <span className="sr-only">Preço de atacado: </span>}
