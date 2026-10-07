@@ -110,7 +110,7 @@ export function BannersEditor() {
                 return <div key={field} className="overflow-hidden rounded-xl border border-border">
                   <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5">
                     <span className="flex items-center gap-2 text-sm font-medium text-malva-800"><Icon className="size-4" />{desktop ? 'Desktop' : 'Celular'}</span>
-                    <span className="text-xs text-muted-foreground">{desktop ? '2000 × 666 px' : '1000 × 639 px'}</span>
+                    <span className="text-xs text-muted-foreground">3840 × 840 px</span>
                   </div>
                   <div className="flex h-44 items-center justify-center bg-malva-50/50 p-3 sm:h-48">
                     {banner[field] ? <img src={banner[field]} alt={`Prévia ${desktop ? 'desktop' : 'mobile'}: ${banner.title || `banner ${index + 1}`}`} className="max-h-full max-w-full rounded object-contain" />

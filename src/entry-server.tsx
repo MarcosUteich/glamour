@@ -91,7 +91,7 @@ export function prerenderPage(html: string, url: string, data: InitialData): str
     const preload = (image: string, media: string) =>
       `<link rel="preload" as="image" href="${escapeHtml(image)}" media="${media}" fetchpriority="high" />`
     const links = banner.mobile_image_url
-      ? preload(banner.image_url, '(min-width: 1024px)') + preload(banner.mobile_image_url, '(max-width: 1023px)')
+      ? preload(banner.image_url, '(min-width: 640px)') + preload(banner.mobile_image_url, '(max-width: 639px)')
       : preload(banner.image_url, 'all')
     html = html.replace('</head>', () => `${links}</head>`)
   }
