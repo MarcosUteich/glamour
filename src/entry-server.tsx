@@ -6,6 +6,7 @@ import { renderToString } from 'react-dom/server'
 import { StaticRouter } from 'react-router'
 import { Providers } from '@/components/Providers'
 import { fetchCatalog, fetchSettings } from '@/data/api'
+import { escapeHtml } from '@/seo/html'
 import { createQueryClient, initialDataScript, seedQueryClient, type InitialData } from '@/lib/query-client'
 import { HowToBuyPage } from '@/pages/HowToBuyPage'
 import { PrivacyPage } from '@/pages/PrivacyPage'
@@ -82,6 +83,18 @@ export function injectApp(html: string, app: string, data: InitialData): string 
 export const MAX_INITIAL_DATA_CHARS = 800_000
 
 export function prerenderPage(html: string, url: string, data: InitialData): string {
+  const location = new URL(url, 'https://glamour.local')
+  const banner = location.pathname === '/' && !location.searchParams.has('busca')
+    ? data.settings.banners?.find((item) => item.active)
+    : undefined
+  if (banner) {
+    const preload = (image: string, media: string) =>
+      `<link rel="preload" as="image" href="${escapeHtml(image)}" media="${media}" fetchpriority="high" />`
+    const links = banner.mobile_image_url
+      ? preload(banner.image_url, '(min-width: 1024px)') + preload(banner.mobile_image_url, '(max-width: 1023px)')
+      : preload(banner.image_url, 'all')
+    html = html.replace('</head>', () => `${links}</head>`)
+  }
   if (initialDataScript(data).length > MAX_INITIAL_DATA_CHARS) return html
   return injectApp(html, renderStorePage(url, data), data)
 }

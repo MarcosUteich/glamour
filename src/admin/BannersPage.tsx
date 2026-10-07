@@ -3,7 +3,7 @@ import { PageTitle } from './ui'
 
 export function BannersPage() {
   return (
-    <div>
+    <div className="mx-auto">
       <PageTitle>Banners</PageTitle>
       <BannersEditor />
     </div>

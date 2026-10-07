@@ -45,10 +45,7 @@ export function Home() {
       {query && <meta name="robots" content="noindex, follow" />}
       {showHero && (
         <>
-          <Hero
-            minOrderCents={settings.min_order_cents}
-            onShop={() => catalogTop.current?.scrollIntoView({ behavior: 'smooth' })}
-          />
+          <Hero />
           <HowItWorks minOrderCents={settings.min_order_cents} />
         </>
       )}
@@ -60,7 +57,7 @@ export function Home() {
           <SearchField value={query} onChange={(value) => setParams(value ? { busca: value } : {}, { replace: true })} />
         </div>
         <div className="mb-6 mt-7 text-center">
-          <SectionTitle as={showHero ? 'h2' : 'h1'}>{title}</SectionTitle>
+          <SectionTitle as="h1">{title}</SectionTitle>
           {category?.description && (
             <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">{category.description}</p>
           )}
@@ -96,7 +93,6 @@ export function Home() {
             products={products}
             categories={data?.categories ?? []}
             heading={showHero ? 'h3' : 'h2'}
-            // Nas categorias a primeira fileira aparece logo na tela do celular; na home ela fica abaixo do banner
             eagerCount={showHero ? 0 : 2}
           />
         )}
